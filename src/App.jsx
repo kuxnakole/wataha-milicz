@@ -2319,7 +2319,6 @@ const DRAWER_NAV = [
 ];
 
 export default function App() {
-  const [loading,  setLoading]  = useState(true);
   const [page,     setPage]     = useState("home");
   const [menuOpen, setMenuOpen] = useState(false);
   const [user,     setUser]     = useState(null);
@@ -2386,7 +2385,6 @@ export default function App() {
       } catch(e) {
         console.warn("Session check error:", e);
       } finally {
-        setLoading(false);  // zawsze zdejmij loading po sprawdzeniu sesji
       }
     };
     init();
@@ -2526,15 +2524,6 @@ export default function App() {
   async function handleLogout() {
     await sb.auth.signOut();
     setUser(null); setPage("home"); toast("Wylogowano pomyślnie");
-  }
-
-  if (loading) {
-    return (
-      <>
-        <style>{GCSS}</style>
-        <LoadingScreen />
-      </>
-    );
   }
 
   if (showAuth) {
