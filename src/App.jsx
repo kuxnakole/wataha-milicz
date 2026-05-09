@@ -698,8 +698,8 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
     try {
       if (mode === "login") {
         const { error } = await sb.auth.signInWithPassword({ email: form.email, password: form.pass });
-        if (error) { setErrs({ email: "Nieprawidłowy email lub hasło" }); setBusy(false); return; }
-        onGuest(); // zamknij ekran — auth state obsługuje App
+        if (error) { setErrs({ email: "Nieprawidłowy email lub hasło" }); return; }
+        onGuest();
       } else {
         const { error } = await sb.auth.signUp({
           email: form.email, password: form.pass,
@@ -708,15 +708,15 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
         if (error) {
           if (error.message.includes("already")) setErrs({ email: "Ten email jest już zajęty" });
           else setErrs({ email: error.message });
-          setBusy(false); return;
+          return;
         }
         onGuest();
-        toast("Konto utworzone! Możesz się zalogować.");
       }
     } catch (e) {
       setErrs({ email: "Błąd połączenia z serwerem" });
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
   }
 
   const cat = form.year && parseInt(form.year) > 1930 ? getCat(form.year) : "";
