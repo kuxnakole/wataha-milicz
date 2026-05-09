@@ -262,7 +262,7 @@ function profileFromDB(p) {
   return { id:p.id, email:"", name:p.name||"", role:p.role||"user", inTeam:p.in_team||false, birthYear:p.birth_year||"", avatar:p.avatar_url||null, nr:p.nr!==false, nra:p.nra||false, nn:p.nn!==false };
 }
 function notifFromDB(n, uid) {
-  return { id:n.id, type:n.type||"news", title:n.title, body:n.body||"", time:n.time_label||"teraz", read:Array.isArray(n.read_by)&&uid?n.read_by.includes(uid):false };
+  return { id:n.id, type:n.type||"news", title:n.title, body:n.body||"", time:n.time_label||"teraz", read:Array.isArray(n.read_by)&&uid?n.read_by.includes(uid):false, read_by:Array.isArray(n.read_by)?n.read_by:[] };
 }
 function userMedals(uid, races) {
   let g = 0, s = 0, b = 0;
@@ -2376,6 +2376,8 @@ export default function App() {
       console.log("[AUTH] setUser:", profile.name, profile.role);
       setUser(profile);
       setData(d => ({ ...d, users: d.users.find(u => u.id === p.id) ? d.users.map(u => u.id === p.id ? profile : u) : [...d.users, profile] }));
+      // Załaduj notyfikacje z user-specific read state (po zalogowaniu/odświeżeniu)
+      loadNotifs();
     } catch (e) { console.warn("[AUTH] loadProfile exception:", e); }
   }
 
