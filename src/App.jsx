@@ -2388,30 +2388,44 @@ export default function App() {
   }, []);
 
   async function loadAllData() {
-    const [siteRes, ridesRes, racesRes, sponsorsRes, notifsRes, profilesRes] = await Promise.all([
-      sb.from("site_settings").select("*"),
-      sb.from("rides").select("*").order("date", { ascending:false }),
-      sb.from("races").select("*, race_results(*)").order("date", { ascending:false }),
-      sb.from("sponsors").select("*"),
-      sb.from("notifications").select("*").order("created_at", { ascending:false }),
-      sb.from("profiles").select("*"),
-    ]);
-    const uid = authUidRef.current;
-    setData({
-      site:     siteFromDB(siteRes.data),
-      rides:    (ridesRes.data || []).map(rideFromDB),
-      races:    (racesRes.data || []).map(raceFromDB),
-      sponsors: sponsorsRes.data || [],
-      notifs:   (notifsRes.data || []).map(n => notifFromDB(n, uid)),
-      users:    (profilesRes.data || []).map(profileFromDB),
-    });
-    setLoading(false);
+    // Maksymalny timeout 6 sekund — po tym czasie pokaż app z domyślnymi danymi
+    const timeout = setTimeout(() => setLoading(false), 3000);
+    try {
+      const uid = authUidRef.current;
+      const [siteRes, ridesRes, racesRes, sponsorsRes, profilesRes] = await Promise.all([
+        sb.from("site_settings").select("*"),
+        sb.from("rides").select("*").order("date", { ascending:false }),
+        sb.from("races").select("*, race_results(*)").order("date", { ascending:false }),
+        sb.from("sponsors").select("*"),
+        sb.from("profiles").select("*"),
+      ]);
+      // Powiadomienia tylko dla zalogowanych
+      let notifsData = INIT_NOTIFS;
+      if (uid) {
+        const { data: nr } = await sb.from("notifications").select("*").order("created_at", { ascending:false });
+        if (nr) notifsData = nr.map(n => notifFromDB(n, uid));
+      }
+      setData(d => ({
+        ...d,
+        site:     siteFromDB(siteRes.data),
+        rides:    (ridesRes.data   || []).map(rideFromDB),
+        races:    (racesRes.data   || []).map(raceFromDB),
+        sponsors: sponsorsRes.data || [],
+        notifs:   notifsData,
+        users:    (profilesRes.data || []).map(profileFromDB),
+      }));
+    } catch(e) {
+      console.warn("Supabase loadAllData error:", e);
+    } finally {
+      clearTimeout(timeout);
+      setLoading(false);
+    }
   }
 
   async function loadRides()    { const { data: r } = await sb.from("rides").select("*").order("date",{ascending:false}); if(r) setData(d=>({...d, rides:r.map(rideFromDB)})); }
   async function loadRaces()    { const { data: r } = await sb.from("races").select("*, race_results(*)").order("date",{ascending:false}); if(r) setData(d=>({...d, races:r.map(raceFromDB)})); }
   async function loadSponsors() { const { data: r } = await sb.from("sponsors").select("*"); if(r) setData(d=>({...d, sponsors:r})); }
-  async function loadNotifs()   { const uid=authUidRef.current; const { data: r } = await sb.from("notifications").select("*").order("created_at",{ascending:false}); if(r) setData(d=>({...d, notifs:r.map(n=>notifFromDB(n,uid))})); }
+  async function loadNotifs()   { const uid=authUidRef.current; if(!uid) return; const { data: r } = await sb.from("notifications").select("*").order("created_at",{ascending:false}); if(r) setData(d=>({...d, notifs:r.map(n=>notifFromDB(n,uid))})); }
 
   // Service Worker registration
   useEffect(() => {
