@@ -2450,15 +2450,6 @@ export default function App() {
     try { window.localStorage.setItem("wataha_install_dismissed", "1"); } catch(_) {}
   }
 
-  const [data, setData] = useState({
-    site:     INIT_SITE,
-    users:    INIT_USERS,
-    rides:    getInitRides(),
-    races:    INIT_RACES,
-    sponsors: INIT_SPONSORS,
-    notifs:   INIT_NOTIFS,
-  });
-
   // Request notification permission shortly after login
   useEffect(() => {
     if (!user) return;

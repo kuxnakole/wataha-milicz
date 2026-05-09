@@ -3,7 +3,7 @@
   "private": true,
   "version": "2.0.0",
   "type": "module",
-  "description": "Wataha Milicz — Milicz Bike Collective PWA",
+  "description": "Wataha Milicz — Barycz Bike Collective",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
