@@ -2375,7 +2375,25 @@ export default function App() {
   });
 
   useEffect(() => {
+    // Sprawdź sesję — to jedyne co blokuje loading screen
+    const init = async () => {
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        if (session?.user) {
+          authUidRef.current = session.user.id;
+          await loadProfile(session.user);
+        }
+      } catch(e) {
+        console.warn("Session check error:", e);
+      } finally {
+        setLoading(false);  // zawsze zdejmij loading po sprawdzeniu sesji
+      }
+    };
+    init();
+
+    // Dane ładują się w tle — nie blokują UI
     loadAllData();
+
     // Real-time subskrypcje
     const ch = sb.channel("wataha-changes")
       .on("postgres_changes", { event:"*", schema:"public", table:"rides" },        () => loadRides())
@@ -2388,8 +2406,7 @@ export default function App() {
   }, []);
 
   async function loadAllData() {
-    // Maksymalny timeout 6 sekund — po tym czasie pokaż app z domyślnymi danymi
-    const timeout = setTimeout(() => setLoading(false), 3000);
+    // Ładuje dane w tle — nie blokuje UI
     try {
       const uid = authUidRef.current;
       const [siteRes, ridesRes, racesRes, sponsorsRes, profilesRes] = await Promise.all([
@@ -2399,8 +2416,7 @@ export default function App() {
         sb.from("sponsors").select("*"),
         sb.from("profiles").select("*"),
       ]);
-      // Powiadomienia tylko dla zalogowanych
-      let notifsData = INIT_NOTIFS;
+      let notifsData = [];
       if (uid) {
         const { data: nr } = await sb.from("notifications").select("*").order("created_at", { ascending:false });
         if (nr) notifsData = nr.map(n => notifFromDB(n, uid));
@@ -2411,14 +2427,11 @@ export default function App() {
         rides:    (ridesRes.data   || []).map(rideFromDB),
         races:    (racesRes.data   || []).map(raceFromDB),
         sponsors: sponsorsRes.data || [],
-        notifs:   notifsData,
+        notifs:   notifsData.length > 0 ? notifsData : d.notifs,
         users:    (profilesRes.data || []).map(profileFromDB),
       }));
     } catch(e) {
-      console.warn("Supabase loadAllData error:", e);
-    } finally {
-      clearTimeout(timeout);
-      setLoading(false);
+      console.warn("loadAllData error:", e);
     }
   }
 
