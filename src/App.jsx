@@ -2336,40 +2336,46 @@ export default function App() {
 
   // ── SUPABASE AUTH ─────────────────────────────────────────
   useEffect(() => {
+    console.log("[AUTH] useEffect setup");
     // 1) Listener — łapie zmiany sesji (login, logout, refresh)
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+      console.log("[AUTH] onAuthStateChange:", event, "session:", session?.user?.id || "none");
       try {
         if (session?.user) {
-          if (authUidRef.current === session.user.id) return; // już załadowane, pomiń
+          if (authUidRef.current === session.user.id) { console.log("[AUTH] same user, skip"); return; }
           authUidRef.current = session.user.id;
           await loadProfile(session.user);
         } else {
           authUidRef.current = null;
           setUser(null);
         }
-      } catch (e) { console.warn("Auth state change error:", e); }
+      } catch (e) { console.warn("[AUTH] Auth state change error:", e); }
     });
 
     // 2) Backup — gdy INITIAL_SESSION wystrzelił przed rejestracją listenera
     sb.auth.getSession().then(({ data: { session } }) => {
+      console.log("[AUTH] getSession:", session?.user?.id || "none");
       if (session?.user && !authUidRef.current) {
+        console.log("[AUTH] backup load profile");
         authUidRef.current = session.user.id;
-        loadProfile(session.user).catch(e => console.warn("Initial loadProfile:", e));
+        loadProfile(session.user).catch(e => console.warn("[AUTH] Initial loadProfile:", e));
       }
-    }).catch(e => console.warn("getSession error:", e));
+    }).catch(e => console.warn("[AUTH] getSession error:", e));
 
     return () => subscription.unsubscribe();
   }, []);
 
   async function loadProfile(authUser) {
+    console.log("[AUTH] loadProfile start:", authUser.id);
     try {
       const { data: p, error } = await sb.from("profiles").select("*").eq("id", authUser.id).maybeSingle();
-      if (error) { console.warn("loadProfile DB error:", error); return; }
-      if (!p) { console.warn("Brak profilu w bazie dla:", authUser.id); return; }
+      if (error) { console.warn("[AUTH] loadProfile DB error:", error); return; }
+      if (!p) { console.warn("[AUTH] Brak profilu w bazie dla:", authUser.id); return; }
       const profile = { ...profileFromDB(p), email: authUser.email };
+      console.log("[AUTH] setUser:", profile.name, profile.role);
       setUser(profile);
       setData(d => ({ ...d, users: d.users.find(u => u.id === p.id) ? d.users.map(u => u.id === p.id ? profile : u) : [...d.users, profile] }));
-    } catch (e) { console.warn("loadProfile exception:", e); }
+    } catch (e) { console.warn("[AUTH] loadProfile exception:", e); }
   }
 
   // ── ŁADOWANIE DANYCH Z SUPABASE ───────────────────────────
