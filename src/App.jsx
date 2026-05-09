@@ -158,9 +158,9 @@ const INIT_USERS = [
 const INIT_SITE = {
   clubName:"WATAHA MILICZ",
   subtitle:"Milicz Bike Collective",
-  motto:"Wataha Milicz to grupa pasjonatow kolarstwa z Milicza i okolic, ktora powstala w 2020 roku.",
-  aboutText:"Jestesmy kolarska wataha — grupa, w ktorej kazdy kilometr ma znaczenie. Jezdzimy razem, regenerujemy razem, wygrywamy razem.",
-  joinText:"Jesli interesujesz sie kolarstwem szosowym i mieszkasz w okolicach Milicza — napisz do nas. Jedno zgloszenie i mozesz zostac czescia Watahy!",
+  motto:"Wataha Milicz to grupa pasjonatów kolarstwa z Milicza i okolic, która powstała w 2020 roku.",
+  aboutText:"Jesteśmy kolarską watahą — grupą, w której każdy kilometr ma znaczenie. Jeździmy razem, regenerujemy razem, wygrywamy razem.",
+  joinText:"Jeśli interesujesz się kolarstwem szosowym i mieszkasz w okolicach Milicza — napisz do nas. Jedno zgłoszenie i możesz zostać częścią Watahy!",
   city:"Milicz",
   founded:"2020",
   logoType:"real",
@@ -176,23 +176,23 @@ const INIT_SITE = {
 function getInitRides() { return [
   { id:"r1", title:"Coffee Ride #13 — Trasa Gorna",
     date:"2026-05-10", time:"07:00", km:65, elev:480, avg:"22-26",
-    status:"upcoming", desc:"Wyjezdzamy o 7:00 spod remizy. Trasa: Milicz - Zmigrod - Milicz. ~65 km.",
-    gpx:null, img:WOLF_BG, sent:false, meet:"Plac Wolnosci, Milicz" },
+    status:"upcoming", desc:"Wyjeżdżamy o 7:00 spod remizy. Trasa: Milicz - Żmigród - Milicz. ~65 km.",
+    gpx:null, img:WOLF_BG, sent:false, meet:"Plac Wolności, Milicz" },
   { id:"r2", title:"Coffee Ride #12",
     date:"2026-04-26", time:"07:30", km:82, elev:610, avg:"20-24",
-    status:"done", desc:"Klasyczna petla przez Milicz i okolice.", gpx:null, img:WOLF_BG, sent:true, meet:"Rynek, Milicz" },
+    status:"done", desc:"Klasyczna pętla przez Milicz i okolice.", gpx:null, img:WOLF_BG, sent:true, meet:"Rynek, Milicz" },
   { id:"r3", title:"Coffee Ride #11",
     date:"2026-04-12", time:"07:00", km:55, elev:390, avg:"20-22",
-    status:"done", desc:"", gpx:null, img:WOLF_BG, sent:false, meet:"Plac Wolnosci, Milicz" },
+    status:"done", desc:"", gpx:null, img:WOLF_BG, sent:false, meet:"Plac Wolności, Milicz" },
 ]; }
 
 const INIT_RACES = [
-  { id:"rc1", name:"MARATON KOLARSKI", sub:"Od Switu do Zmierzchu",
-    date:"2026-07-11", loc:"Miejska Gorka",
+  { id:"rc1", name:"MARATON KOLARSKI", sub:"Od Świtu do Zmierzchu",
+    date:"2026-07-11", loc:"Miejska Górka",
     dists:[{ lbl:"Dystans dlugi", km:120 },{ lbl:"Dystans sredni", km:60 }],
     status:"upcoming", results:[] },
   { id:"rc2", name:"MARATON KOLARSKI", sub:"Kozmin Wielkopolski",
-    date:"2025-06-21", loc:"Kozmin Wlkp.",
+    date:"2025-06-21", loc:"Koźmin Wlkp.",
     dists:[{ lbl:"Open", km:100 },{ lbl:"Masters", km:70 }],
     status:"done",
     results:[
@@ -203,15 +203,15 @@ const INIT_RACES = [
 ];
 
 const INIT_SPONSORS = [
-  { id:"s1", name:"MILICZ SPORT",               tier:"Platinum", logo:"MS", desc:"Sprzet sportowy i serwis",         web:"" },
+  { id:"s1", name:"MILICZ SPORT",               tier:"Platinum", logo:"MS", desc:"Sprzęt sportowy i serwis",         web:"" },
   { id:"s2", name:"KAWIARNIA STARA MLECZARNIA", tier:"Gold",     logo:"SM", desc:"Oficjalna kawiarnia Watahy",       web:"" },
   { id:"s3", name:"AUTO SERWIS BECKER",         tier:"Silver",   logo:"AB", desc:"Serwis samochodowy i wulkanizacja",web:"" },
 ];
 
 const INIT_NOTIFS = [
   { id:"n1", type:"ride", title:"Nowy Coffee Ride!",      body:"Coffee Ride #13 — 10 maja, 7:00. Trasa 65 km.", time:"2 godz. temu", read:false },
-  { id:"n2", type:"race", title:"Zblizajacy sie wyscig",  body:"Maraton Kolarski — Miejska Gorka, 11 lipca",    time:"wczoraj",      read:false },
-  { id:"n3", type:"news", title:"Nowy zawodnik!",         body:"Tomek W. dolaczyl do Watahy. Witamy!",          time:"3 dni temu",   read:true  },
+  { id:"n2", type:"race", title:"Zbliżający się wyścig",  body:"Maraton Kolarski — Miejska Górka, 11 lipca",    time:"wczoraj",      read:false },
+  { id:"n3", type:"news", title:"Nowy zawodnik!",         body:"Tomek W. dołączył do Watahy. Witamy!",          time:"3 dni temu",   read:true  },
 ];
 
 // ── MEDAL HELPERS ─────────────────────────────────────────────
@@ -637,12 +637,12 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
 
   function validate() {
     const e = {};
-    if (!form.email || !form.email.includes("@")) e.email = "Wpisz prawidlowy email";
-    if (!form.pass) e.pass = "Haslo jest wymagane";
+    if (!form.email || !form.email.includes("@")) e.email = "Wpisz prawidłowy email";
+    if (!form.pass) e.pass = "Hasło jest wymagane";
     if (mode === "register") {
-      if (!form.name)  e.name = "Imie i nazwisko jest wymagane";
-      if (form.pass.length < 6)  e.pass  = "Haslo min. 6 znakow";
-      if (form.pass !== form.pass2) e.pass2 = "Hasla sie nie zgadzaja";
+      if (!form.name)  e.name = "Imię i nazwisko jest wymagane";
+      if (form.pass.length < 6)  e.pass  = "Hasło min. 6 znaków";
+      if (form.pass !== form.pass2) e.pass2 = "Hasła się nie zgadzają";
       const y = parseInt(form.year);
       if (!y || y < 1930 || y > new Date().getFullYear()) e.year = "Podaj rok urodzenia (np. 1985)";
     }
@@ -656,10 +656,10 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
     await new Promise(r => setTimeout(r, 600));
     if (mode === "login") {
       const u = users.find(x => x.email === form.email && x.pass === form.pass);
-      if (!u) { setErrs({ email:"Nieprawidlowy email lub haslo" }); setBusy(false); return; }
+      if (!u) { setErrs({ email:"Nieprawidłowy email lub hasło" }); setBusy(false); return; }
       onLogin(u);
     } else {
-      if (users.find(x => x.email === form.email)) { setErrs({ email:"Ten email jest juz zajety" }); setBusy(false); return; }
+      if (users.find(x => x.email === form.email)) { setErrs({ email:"Ten email jest już zajęty" }); setBusy(false); return; }
       const nu = {
         id: "u" + Date.now(), name:form.name, email:form.email, pass:form.pass,
         role:"user", inTeam:false, birthYear:form.year,
@@ -686,7 +686,7 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
 
       <div style={{ background:SURF, backgroundImage:CARD_GRAD, borderRadius:20, padding:"24px 22px", width:"100%", maxWidth:400, border:"1px solid " + BDR, marginBottom:14, boxShadow:"0 16px 48px rgba(0,0,0,0.5)", position:"relative", animation:"fadeUp 0.55s " + SPR + " 0.08s both" }}>
         <div style={{ display:"flex", background:SURF2, borderRadius:11, padding:3, marginBottom:22, gap:3 }}>
-          {[["login","Zaloguj sie"],["register","Rejestracja"]].map(([m, l]) => (
+          {[["login","Zaloguj się"],["register","Rejestracja"]].map(([m, l]) => (
             <button key={m} onClick={() => { setMode(m); setErrs({}); }} className="no-tap"
               style={{ flex:1, background: mode === m ? RED : "transparent", border:"none", borderRadius:9, padding:"9px 0", color: mode === m ? "#fff" : SUB, fontFamily:FT, fontWeight:600, fontSize:12, letterSpacing:1, cursor:"pointer", textTransform:"uppercase", boxShadow: mode === m ? "0 4px 14px rgba(255,0,38,0.35)" : "none", transition: "background 0.25s ease, color 0.25s ease, box-shadow 0.25s ease" }}>
               {l}
@@ -694,7 +694,7 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
           ))}
         </div>
 
-        {mode === "register" && <TInput label="Imie i nazwisko" value={form.name} onChange={sf("name")} error={errs.name} placeholder="Jan Kowalski" />}
+        {mode === "register" && <TInput label="Imię i nazwisko" value={form.name} onChange={sf("name")} error={errs.name} placeholder="Jan Kowalski" />}
         <TInput label="Email" type="email" value={form.email} onChange={sf("email")} error={errs.email} placeholder="jan@example.pl" />
 
         <div style={{ marginBottom:13 }}>
@@ -710,19 +710,19 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
 
         {mode === "register" && (
           <>
-            <TInput label="Potwierdz haslo" type="password" value={form.pass2} onChange={sf("pass2")} error={errs.pass2} placeholder="••••••••" />
+            <TInput label="Potwierdź hasło" type="password" value={form.pass2} onChange={sf("pass2")} error={errs.pass2} placeholder="••••••••" />
             <TInput label="Rok urodzenia" type="number" value={form.year} onChange={sf("year")} error={errs.year} placeholder="np. 1985"
               hint={cat ? "Kategoria: " + cat : ""} />
           </>
         )}
 
         <Btn full onClick={submit} disabled={busy} sx={{ marginTop:6 }}>
-          {busy ? "Ladowanie..." : mode === "login" ? "ZALOGUJ SIE" : "UTWORZ KONTO"}
+          {busy ? "Ładowanie..." : mode === "login" ? "ZALOGUJ SIĘ" : "UTWÓRZ KONTO"}
         </Btn>
       </div>
 
       <button onClick={onGuest} className="no-tap" style={{ background:"none", border:"1px solid " + BDR, borderRadius:11, padding:"11px 26px", color:SUB, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:1.2, marginBottom:22, textTransform:"uppercase", animation:"fadeUp 0.55s " + SPR + " 0.16s both" }}>
-        PRZEGLADAJ BEZ LOGOWANIA →
+        PRZEGLĄDAJ BEZ LOGOWANIA →
       </button>
 
       <div style={{ background:SURF, backgroundImage:CARD_GRAD, borderRadius:13, padding:"13px 18px", width:"100%", maxWidth:400, border:"1px solid " + BDR, animation:"fadeUp 0.55s " + SPR + " 0.22s both" }}>
@@ -845,12 +845,12 @@ function HomeScreen({ data }) {
 // ═══════════════════════════════════════════════════════════════
 // GPX MAP — leaflet from CDN, dark tiles, red track polyline
 // ═══════════════════════════════════════════════════════════════
-function GpxMap({ url }) {
+function GpxMap({ url, gpxText: gpxTextProp, fileName }) {
   const containerRef = useRef(null);
   const [state, setState] = useState({ loading:true, error:null, stats:null });
 
   useEffect(() => {
-    if (!url) return;
+    if (!url && !gpxTextProp) return;
     let cancelled = false;
     let map;
 
@@ -867,11 +867,64 @@ function GpxMap({ url }) {
           const s = document.createElement("script");
           s.src = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
           s.onload = res;
-          s.onerror = () => rej(new Error("Nie udalo sie zaladowac biblioteki mapy"));
+          s.onerror = () => rej(new Error("Nie udało się załadować biblioteki mapy"));
           document.head.appendChild(s);
         });
       }
       return window.L;
+    }
+
+    function parseAndRender(L, txt) {
+      const doc = new DOMParser().parseFromString(txt, "application/xml");
+      if (doc.querySelector("parsererror")) throw new Error("Nieprawidłowy plik XML");
+
+      const trkpts = Array.from(doc.querySelectorAll("trkpt, rtept, wpt"));
+      const pts = trkpts.map(p => [
+        parseFloat(p.getAttribute("lat")),
+        parseFloat(p.getAttribute("lon")),
+      ]).filter(([a, b]) => !isNaN(a) && !isNaN(b));
+
+      if (pts.length < 2) throw new Error("Brak punktów GPS w pliku");
+
+      const eles = trkpts.map(p => {
+        const e = p.querySelector("ele");
+        return e ? parseFloat(e.textContent) : null;
+      }).filter(v => v !== null && !isNaN(v));
+
+      let dist = 0;
+      for (let i = 1; i < pts.length; i++) {
+        const [la1, lo1] = pts[i - 1];
+        const [la2, lo2] = pts[i];
+        const R = 6371;
+        const dLa = (la2 - la1) * Math.PI / 180;
+        const dLo = (lo2 - lo1) * Math.PI / 180;
+        const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
+        dist += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      }
+
+      let elevGain = 0;
+      for (let i = 1; i < eles.length; i++) {
+        const d = eles[i] - eles[i - 1];
+        if (d > 0) elevGain += d;
+      }
+
+      if (!containerRef.current) return;
+
+      map = L.map(containerRef.current, { zoomControl:true, scrollWheelZoom:false, attributionControl:false });
+
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+        maxZoom:19, subdomains:"abcd",
+      }).addTo(map);
+
+      const line = L.polyline(pts, { color:"#FF0026", weight:4, opacity:0.95, lineCap:"round", lineJoin:"round" }).addTo(map);
+
+      const startIcon = L.divIcon({ html:'<div style="width:14px;height:14px;border-radius:50%;background:#34C759;border:2px solid #fff;box-shadow:0 0 10px rgba(52,199,89,0.8);"></div>', className:"", iconSize:[14,14], iconAnchor:[7,7] });
+      const endIcon   = L.divIcon({ html:'<div style="width:14px;height:14px;border-radius:50%;background:#FF0026;border:2px solid #fff;box-shadow:0 0 12px rgba(255,0,38,0.9);"></div>', className:"", iconSize:[14,14], iconAnchor:[7,7] });
+      L.marker(pts[0], { icon:startIcon }).addTo(map);
+      L.marker(pts[pts.length - 1], { icon:endIcon }).addTo(map);
+      map.fitBounds(line.getBounds(), { padding:[22,22] });
+
+      setState({ loading:false, error:null, stats:{ points:pts.length, dist:dist.toFixed(1), elev:elevGain > 0 ? Math.round(elevGain) : null } });
     }
 
     async function init() {
@@ -880,81 +933,18 @@ function GpxMap({ url }) {
         const L = await loadLeaflet();
         if (cancelled) return;
 
-        const r = await fetch(url);
-        if (!r.ok) throw new Error("HTTP " + r.status);
-        const txt = await r.text();
+        let txt;
+        if (gpxTextProp) {
+          txt = gpxTextProp;
+        } else {
+          const r = await fetch(url);
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          txt = await r.text();
+        }
         if (cancelled) return;
-
-        const doc = new DOMParser().parseFromString(txt, "application/xml");
-        if (doc.querySelector("parsererror")) throw new Error("Nieprawidlowy XML");
-
-        const trkpts = Array.from(doc.querySelectorAll("trkpt, rtept, wpt"));
-        const pts = trkpts.map(p => [
-          parseFloat(p.getAttribute("lat")),
-          parseFloat(p.getAttribute("lon")),
-        ]).filter(([a, b]) => !isNaN(a) && !isNaN(b));
-
-        if (pts.length < 2) throw new Error("Brak punktow GPS w pliku");
-
-        const eles = trkpts.map(p => {
-          const e = p.querySelector("ele");
-          return e ? parseFloat(e.textContent) : null;
-        }).filter(v => v !== null && !isNaN(v));
-
-        let dist = 0;
-        for (let i = 1; i < pts.length; i++) {
-          const [la1, lo1] = pts[i - 1];
-          const [la2, lo2] = pts[i];
-          const R = 6371;
-          const dLa = (la2 - la1) * Math.PI / 180;
-          const dLo = (lo2 - lo1) * Math.PI / 180;
-          const a = Math.sin(dLa / 2) ** 2 + Math.cos(la1 * Math.PI / 180) * Math.cos(la2 * Math.PI / 180) * Math.sin(dLo / 2) ** 2;
-          dist += R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-        }
-
-        let elevGain = 0;
-        for (let i = 1; i < eles.length; i++) {
-          const d = eles[i] - eles[i - 1];
-          if (d > 0) elevGain += d;
-        }
-
-        if (cancelled || !containerRef.current) return;
-
-        map = L.map(containerRef.current, {
-          zoomControl: true,
-          scrollWheelZoom: false,
-          attributionControl: false,
-        });
-
-        L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
-          maxZoom: 19,
-          subdomains: "abcd",
-        }).addTo(map);
-
-        const line = L.polyline(pts, {
-          color: "#FF0026",
-          weight: 4,
-          opacity: 0.95,
-          lineCap: "round",
-          lineJoin: "round",
-        }).addTo(map);
-
-        const startIcon = L.divIcon({
-          html: '<div style="width:14px;height:14px;border-radius:50%;background:#34C759;border:2px solid #fff;box-shadow:0 0 10px rgba(52,199,89,0.8);"></div>',
-          className: "", iconSize: [14, 14], iconAnchor: [7, 7],
-        });
-        const endIcon = L.divIcon({
-          html: '<div style="width:14px;height:14px;border-radius:50%;background:#FF0026;border:2px solid #fff;box-shadow:0 0 12px rgba(255,0,38,0.9);"></div>',
-          className: "", iconSize: [14, 14], iconAnchor: [7, 7],
-        });
-        L.marker(pts[0], { icon: startIcon }).addTo(map);
-        L.marker(pts[pts.length - 1], { icon: endIcon }).addTo(map);
-
-        map.fitBounds(line.getBounds(), { padding: [22, 22] });
-
-        setState({ loading:false, error:null, stats: { points:pts.length, dist:dist.toFixed(1), elev: elevGain > 0 ? Math.round(elevGain) : null } });
+        parseAndRender(L, txt);
       } catch (e) {
-        if (!cancelled) setState({ loading:false, error: e.message || "Blad ladowania", stats:null });
+        if (!cancelled) setState({ loading:false, error:e.message || "Błąd ładowania", stats:null });
       }
     }
 
@@ -963,21 +953,34 @@ function GpxMap({ url }) {
       cancelled = true;
       if (map) { try { map.remove(); } catch(_){} }
     };
-  }, [url]);
+  }, [url, gpxTextProp]);
 
-  if (!url) return null;
+  if (!url && !gpxTextProp) return null;
+
+  const downloadHref = gpxTextProp
+    ? "data:application/gpx+xml;charset=utf-8," + encodeURIComponent(gpxTextProp)
+    : url;
+  const downloadName = fileName || "trasa.gpx";
 
   return (
     <div style={{ marginBottom:14, borderRadius:14, overflow:"hidden", border:"1px solid " + BDR, background:SURF, boxShadow:"0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.40)" }}>
       <div style={{ padding:"12px 16px 9px", display:"flex", justifyContent:"space-between", alignItems:"center", gap:9 }}>
         <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, textTransform:"uppercase", fontWeight:600 }}>TRASA GPX</div>
-        {state.stats && (
-          <div style={{ display:"flex", gap:8, fontFamily:FT, fontSize:11, fontWeight:600, letterSpacing:0.4 }}>
-            <span style={{ color:RED }}>{state.stats.dist} km</span>
-            {state.stats.elev !== null && <span style={{ color:SUB }}>· ⛰ {state.stats.elev} m</span>}
-            <span style={{ color:MUTED }}>· {state.stats.points} pkt</span>
-          </div>
-        )}
+        <div style={{ display:"flex", gap:10, alignItems:"center" }}>
+          {state.stats && (
+            <div style={{ display:"flex", gap:8, fontFamily:FT, fontSize:11, fontWeight:600, letterSpacing:0.4 }}>
+              <span style={{ color:RED }}>{state.stats.dist} km</span>
+              {state.stats.elev !== null && <span style={{ color:SUB }}>· ⛰ {state.stats.elev} m</span>}
+              <span style={{ color:MUTED }}>· {state.stats.points} pkt</span>
+            </div>
+          )}
+          {gpxTextProp && (
+            <a href={downloadHref} download={downloadName}
+              style={{ color:RED, textDecoration:"none", fontFamily:FT, fontWeight:700, fontSize:10, letterSpacing:1, padding:"4px 10px", background:REDD, border:"1px solid " + REDB, borderRadius:7, whiteSpace:"nowrap" }}>
+              ⬇ POBIERZ
+            </a>
+          )}
+        </div>
       </div>
       <div ref={containerRef} style={{ height:260, background:BG2, position:"relative" }}>
         {state.loading && (
@@ -987,16 +990,15 @@ function GpxMap({ url }) {
               <div style={{ width:8, height:8, borderRadius:"50%", background:RED, animation:"dot2 1.2s ease-in-out 0.2s infinite", boxShadow:"0 0 10px " + REDG }} />
               <div style={{ width:8, height:8, borderRadius:"50%", background:RED, animation:"dot3 1.2s ease-in-out 0.4s infinite", boxShadow:"0 0 10px " + REDG }} />
             </div>
-            <div style={{ fontSize:10, color:SUB, fontFamily:FT, letterSpacing:1.4, textTransform:"uppercase", fontWeight:600 }}>Laduje trase...</div>
+            <div style={{ fontSize:10, color:SUB, fontFamily:FT, letterSpacing:1.4, textTransform:"uppercase", fontWeight:600 }}>Ładuję trasę...</div>
           </div>
         )}
         {state.error && (
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:7, padding:18, textAlign:"center", zIndex:1 }}>
             <div style={{ fontSize:26, opacity:0.7 }}>⚠</div>
-            <div style={{ fontSize:12, color:RED, fontFamily:FT, fontWeight:700, letterSpacing:1, textTransform:"uppercase" }}>BLAD WCZYTANIA TRASY</div>
+            <div style={{ fontSize:12, color:RED, fontFamily:FT, fontWeight:700, letterSpacing:1, textTransform:"uppercase" }}>BŁĄD WCZYTANIA TRASY</div>
             <div style={{ fontSize:11, color:MUTED, lineHeight:1.5, maxWidth:280 }}>{state.error}</div>
-            <div style={{ fontSize:10, color:MUTED, marginTop:4, lineHeight:1.5 }}>Sprawdz link lub uprawnienia CORS hosta</div>
-            <a href={url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:RED, marginTop:6, textDecoration:"none", fontFamily:FT, fontWeight:600, letterSpacing:0.6 }}>OTWORZ GPX W NOWEJ KARCIE →</a>
+            {url && <a href={url} target="_blank" rel="noreferrer" style={{ fontSize:11, color:RED, marginTop:6, textDecoration:"none", fontFamily:FT, fontWeight:600, letterSpacing:0.6 }}>OTWÓRZ GPX W NOWEJ KARCIE →</a>}
           </div>
         )}
       </div>
@@ -1016,7 +1018,7 @@ function RidesScreen({ data, setData, currentUser, toast }) {
   const imgRef = useRef();
   const isAdmin = currentUser && currentUser.role === "admin";
 
-  const emptyForm = { title:"", date:"", time:"07:00", km:"", elev:"", avg:"", desc:"", gpx:null, gpxData:null, gpxUrl:"", img:null, meet:"", status:"upcoming" };
+  const emptyForm = { title:"", date:"", time:"07:00", km:"", elev:"", avg:"", desc:"", gpx:null, gpxText:null, gpxUrl:"", img:null, meet:"", status:"upcoming" };
   const [form, setForm] = useState(emptyForm);
   const sf = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -1081,7 +1083,7 @@ function RidesScreen({ data, setData, currentUser, toast }) {
   function delRide(id) {
     setData(d => ({ ...d, rides: d.rides.filter(r => r.id !== id) }));
     setDetail(null);
-    toast("Ustawka usunieta");
+    toast("Ustawka usunięta");
   }
 
   async function sendWH(r) {
@@ -1094,9 +1096,9 @@ function RidesScreen({ data, setData, currentUser, toast }) {
         body: JSON.stringify({ id:r.id, rideNum:r.rideNum, title:r.title, date:r.date, time:r.time, km:r.km, elev:r.elev, avg:r.avg, desc:r.desc, gpx:r.gpx, gpxUrl:r.gpxUrl, meet:r.meet, club:data.site.clubName }),
       }).catch(() => {});
       setData(d => ({ ...d, rides: d.rides.map(x => x.id === r.id ? { ...x, sent:true } : x) }));
-      toast("Webhook wyslany do Make.com!");
+      toast("Webhook wysłany do Make.com!");
     } catch (e) {
-      toast("Blad wysylki", "error");
+      toast("Błąd wysyłki", "error");
     }
     setSending(null);
   }
@@ -1137,62 +1139,55 @@ function RidesScreen({ data, setData, currentUser, toast }) {
     );
   }
 
-  function FormContent() {
-    return (
-      <>
-        <TInput label="Nazwa ustawki" value={form.title} onChange={sf("title")} placeholder="Coffee Ride #14" />
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
-          <TInput label="Data" type="date" value={form.date} onChange={sf("date")} />
-          <TInput label="Godzina" type="time" value={form.time} onChange={sf("time")} />
-        </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:11 }}>
-          <TInput label="km" type="number" value={form.km} onChange={sf("km")} placeholder="65" />
-          <TInput label="Przewyz. m" type="number" value={form.elev} onChange={sf("elev")} placeholder="400" />
-          <TInput label="Tempo km/h" value={form.avg} onChange={sf("avg")} placeholder="22-26" />
-        </div>
-        <TInput label="Miejsce startu" value={form.meet} onChange={sf("meet")} placeholder="Plac Wolnosci, Milicz" />
-        <TArea label="Opis trasy (FB)" value={form.desc} onChange={sf("desc")} placeholder="Opisz trase..." />
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:6 }}>
-          <div>
-            <input ref={gpxRef} type="file" accept=".gpx" onChange={e => { const f = e.target.files[0]; if (!f) return; const rr = new FileReader(); rr.onload = ev => setForm(x => ({ ...x, gpx:f.name, gpxData:ev.target.result })); rr.readAsDataURL(f); }} style={{ display:"none" }} />
-            <Btn size="sm" v="ghost" sx={{ width:"100%" }} onClick={() => gpxRef.current.click()}><IMap /> GPX</Btn>
-            {form.gpx && <div style={{ color:GRN, fontSize:11, marginTop:5, textAlign:"center" }}>✓ {form.gpx}</div>}
-          </div>
-          <div>
-            <input ref={imgRef} type="file" accept="image/*" onChange={e => { const f = e.target.files[0]; if (!f) return; const rr = new FileReader(); rr.onload = ev => setForm(x => ({ ...x, img: ev.target.result })); rr.readAsDataURL(f); }} style={{ display:"none" }} />
-            <Btn size="sm" v="ghost" sx={{ width:"100%" }} onClick={() => imgRef.current.click()}><IPhoto /> GRAFIKA</Btn>
-            {form.img && <div style={{ color:GRN, fontSize:11, marginTop:5, textAlign:"center" }}>✓ Dodano</div>}
-          </div>
-        </div>
-        {form.img && <img src={form.img} alt="" style={{ width:"100%", borderRadius:11, maxHeight:140, objectFit:"cover", marginBottom:12 }} />}
-        <TInput label="LINK DO PLIKU GPX (URL)" value={form.gpxUrl} onChange={sf("gpxUrl")} placeholder="https://..../trasa.gpx"
-          hint="Wklej bezposredni link do pliku .gpx — mapa wyswietli sie w szczegolach. Host musi miec wlaczone CORS (np. GitHub raw, Dropbox direct, wlasny serwer)." />
-        <div style={{ display:"flex", gap:11, marginTop:10 }}>
-          <Btn full onClick={save}>{editing ? "ZAPISZ ZMIANY" : "DODAJ USTAWKE"}</Btn>
-          <Btn full v="ghost" onClick={() => { setShowForm(false); setEditing(null); }}>ANULUJ</Btn>
-        </div>
-      </>
-    );
-  }
 
   return (
     <div className="fade-stagger">
-      <SHead title="COFFEE RIDES" sub="Nasze wspolne ustawki"
+      <SHead title="COFFEE RIDES" sub="Nasze wspólne ustawki"
         action={isAdmin && <Btn size="sm" onClick={openAdd}><IPlus /> DODAJ</Btn>}
       />
       {upcoming.length > 0 && (
         <>
-          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZACE</div>
+          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZĄCE</div>
           {upcoming.map(r => <RideRow key={r.id} r={r} />)}
           <div style={{ height:1, background:BDR, margin:"18px 0" }} />
-          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>ZAKONCZONE</div>
+          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>ZAKOŃCZONE</div>
         </>
       )}
       {done.map(r => <RideRow key={r.id} r={r} />)}
 
       {showForm && (
-        <Sheet title={editing ? "EDYTUJ USTAWKE" : "NOWA USTAWKA"} onClose={() => { setShowForm(false); setEditing(null); }}>
-          <FormContent />
+        <Sheet title={editing ? "EDYTUJ USTAWKĘ" : "NOWA USTAWKA"} onClose={() => { setShowForm(false); setEditing(null); }}>
+          <TInput label="Nazwa ustawki" value={form.title} onChange={sf("title")} placeholder="Coffee Ride #14" />
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
+            <TInput label="Data" type="date" value={form.date} onChange={sf("date")} />
+            <TInput label="Godzina" type="time" value={form.time} onChange={sf("time")} />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:11 }}>
+            <TInput label="km" type="number" value={form.km} onChange={sf("km")} placeholder="65" />
+            <TInput label="Przewyz. m" type="number" value={form.elev} onChange={sf("elev")} placeholder="400" />
+            <TInput label="Tempo km/h" value={form.avg} onChange={sf("avg")} placeholder="22-26" />
+          </div>
+          <TInput label="Miejsce startu" value={form.meet} onChange={sf("meet")} placeholder="Plac Wolności, Milicz" />
+          <TArea label="Opis trasy (FB)" value={form.desc} onChange={sf("desc")} placeholder="Opisz trasę..." />
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:6 }}>
+            <div>
+              <input ref={gpxRef} type="file" accept=".gpx" onChange={e => { const f = e.target.files[0]; if (!f) return; const rr = new FileReader(); rr.onload = ev => setForm(x => ({ ...x, gpx:f.name, gpxText:ev.target.result })); rr.readAsText(f); }} style={{ display:"none" }} />
+              <Btn size="sm" v="ghost" sx={{ width:"100%" }} onClick={() => gpxRef.current.click()}><IMap /> GPX</Btn>
+              {form.gpx && <div style={{ color:GRN, fontSize:11, marginTop:5, textAlign:"center" }}>✓ {form.gpx}</div>}
+            </div>
+            <div>
+              <input ref={imgRef} type="file" accept="image/*" onChange={e => { const f = e.target.files[0]; if (!f) return; const rr = new FileReader(); rr.onload = ev => setForm(x => ({ ...x, img: ev.target.result })); rr.readAsDataURL(f); }} style={{ display:"none" }} />
+              <Btn size="sm" v="ghost" sx={{ width:"100%" }} onClick={() => imgRef.current.click()}><IPhoto /> GRAFIKA</Btn>
+              {form.img && <div style={{ color:GRN, fontSize:11, marginTop:5, textAlign:"center" }}>✓ Dodano</div>}
+            </div>
+          </div>
+          {form.img && <img src={form.img} alt="" style={{ width:"100%", borderRadius:11, maxHeight:140, objectFit:"cover", marginBottom:12 }} />}
+          <TInput label="LINK DO PLIKU GPX (URL)" value={form.gpxUrl} onChange={sf("gpxUrl")} placeholder="https://..../trasa.gpx"
+            hint="Wklej bezposredni link do pliku .gpx — mapa wyswietli sie w szczegolach. Host musi miec wlaczone CORS (np. GitHub raw, Dropbox direct, wlasny serwer)." />
+          <div style={{ display:"flex", gap:11, marginTop:10 }}>
+            <Btn full onClick={save}>{editing ? "ZAPISZ ZMIANY" : "DODAJ USTAWKĘ"}</Btn>
+            <Btn full v="ghost" onClick={() => { setShowForm(false); setEditing(null); }}>ANULUJ</Btn>
+          </div>
         </Sheet>
       )}
 
@@ -1231,19 +1226,18 @@ function RidesScreen({ data, setData, currentUser, toast }) {
             </Card>
           )}
           {detail.gpxUrl && <GpxMap url={detail.gpxUrl} />}
-          {detail.gpx && !detail.gpxUrl && (
+          {detail.gpxText && !detail.gpxUrl && <GpxMap gpxText={detail.gpxText} fileName={detail.gpx} />}
+          {detail.gpx && !detail.gpxUrl && !detail.gpxText && (
             <div style={{ background:SURF2, borderRadius:11, padding:"11px 15px", display:"flex", alignItems:"center", gap:10, color:SUB, fontSize:12, marginBottom:14, border:"1px solid " + BDR }}>
               <IMap />
               <span style={{ flex:1 }}>GPX: {detail.gpx}</span>
-              {detail.gpxData
-                ? <a href={detail.gpxData} download={detail.gpx} style={{ color:RED, textDecoration:"none", fontFamily:FT, fontWeight:700, fontSize:10, letterSpacing:1, padding:"5px 11px", background:REDD, border:"1px solid " + REDB, borderRadius:7, whiteSpace:"nowrap" }}>⬇ POBIERZ</a>
-                : <span style={{ color:MUTED, fontSize:10 }}>brak pliku</span>}
+              <span style={{ color:MUTED, fontSize:10 }}>brak pliku</span>
             </div>
           )}
           {isAdmin && (
             <div style={{ display:"flex", gap:8, paddingTop:14, borderTop:"1px solid " + BDR }}>
               <Btn size="sm" v={detail.sent ? "success" : "ghost"} onClick={() => sendWH(detail)} disabled={sending === detail.id || detail.sent}>
-                <ISend />{detail.sent ? "Wyslano FB" : sending === detail.id ? "Wysylam..." : "Wyslij na FB"}
+                <ISend />{detail.sent ? "Wysłano FB" : sending === detail.id ? "Wysyłam..." : "Wyślij na FB"}
               </Btn>
               <Btn size="sm" v="ghost" onClick={() => openEdit(detail)}><IEdit /> Edytuj</Btn>
               <Btn size="sm" v="danger" sx={{ marginLeft:"auto" }} onClick={() => delRide(detail.id)}><ITrash /></Btn>
@@ -1315,7 +1309,7 @@ function RacesScreen({ data, setData, currentUser, toast }) {
 
   function delResult(raceId, idx) {
     setData(d => ({ ...d, races: d.races.map(r => r.id === raceId ? { ...r, results: r.results.filter((_, i) => i !== idx) } : r) }));
-    toast("Wynik usuniety");
+    toast("Wynik usunięty");
   }
 
   const MED = { gold:"🥇", silver:"🥈", bronze:"🥉" };
@@ -1414,26 +1408,26 @@ function RacesScreen({ data, setData, currentUser, toast }) {
 
   return (
     <div className="fade-stagger">
-      <SHead title="STARTY ZAWODOW" sub="Nadchodzace i zakonczone wyscigi"
+      <SHead title="STARTY ZAWODÓW" sub="Nadchodzące i zakończone wyścigi"
         action={isAdmin && <Btn size="sm" onClick={() => { setForm(emptyR); setEditRace(null); setShowForm(true); }}><IPlus /> DODAJ</Btn>}
       />
       {upcoming.length > 0 && (
         <>
-          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZACE STARTY</div>
+          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZĄCE STARTY</div>
           {upcoming.map(r => <RaceCard key={r.id} r={r} />)}
           <div style={{ height:1, background:BDR, margin:"18px 0" }} />
         </>
       )}
-      <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>ZAKONCZONE STARTY</div>
+      <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>ZAKOŃCZONE STARTY</div>
       {done.map(r => <RaceCard key={r.id} r={r} />)}
 
       {showForm && (
         <Sheet title={editRace ? "EDYTUJ START" : "NOWY START"} onClose={() => { setShowForm(false); setEditRace(null); setForm(emptyR); }}>
-          <TInput label="Nazwa wyscigu" value={form.name} onChange={sf("name")} placeholder="Maraton Kolarski" />
-          <TInput label="Podtytul / edycja" value={form.sub} onChange={sf("sub")} placeholder="np. Od Switu do Zmierzchu" />
+          <TInput label="Nazwa wyścigu" value={form.name} onChange={sf("name")} placeholder="Maraton Kolarski" />
+          <TInput label="Podtytuł / edycja" value={form.sub} onChange={sf("sub")} placeholder="np. Od Świtu do Zmierzchu" />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
             <TInput label="Data" type="date" value={form.date} onChange={sf("date")} />
-            <TInput label="Lokalizacja" value={form.loc} onChange={sf("loc")} placeholder="Kozmin Wlkp." />
+            <TInput label="Lokalizacja" value={form.loc} onChange={sf("loc")} placeholder="Koźmin Wlkp." />
           </div>
           <div style={{ marginBottom:13 }}>
             <label style={{ display:"block", marginBottom:6, fontSize:10, color:SUB, textTransform:"uppercase", letterSpacing:1.6, fontFamily:FT, fontWeight:600 }}>LOGO ZAWODOW</label>
@@ -1476,8 +1470,8 @@ function RacesScreen({ data, setData, currentUser, toast }) {
             const u = data.users.find(x => x.id === e.target.value);
             if (u) setResForm(f => ({ ...f, uid:u.id, name:u.name, cat:getCat(u.birthYear) }));
             else   setResForm(f => ({ ...f, uid:"" }));
-          }} opts={[{ v:"", l:"— Wpisz recznie —" }, ...data.users.filter(u => u.inTeam).map(u => ({ v:u.id, l:u.name + " (" + getCat(u.birthYear) + ")" }))]} />
-          <TInput label="Imie i nazwisko" value={resForm.name} onChange={srf("name")} placeholder="lub wpisz recznie" />
+          }} opts={[{ v:"", l:"— Wpisz ręcznie —" }, ...data.users.filter(u => u.inTeam).map(u => ({ v:u.id, l:u.name + " (" + getCat(u.birthYear) + ")" }))]} />
+          <TInput label="Imię i nazwisko" value={resForm.name} onChange={srf("name")} placeholder="lub wpisz ręcznie" />
           <TInput label="Kategoria" value={resForm.cat} onChange={srf("cat")} placeholder="M40, Masters 30+..." />
           <TSel label="Dystans" value={resForm.dist} onChange={srf("dist")}
             opts={[{ v:"", l:"— wybierz —" }, ...(data.races.find(r => r.id === resRaceId)?.dists || []).map(d => ({ v:d.lbl, l:d.lbl + " (" + d.km + "km)" }))]} />
@@ -1510,7 +1504,7 @@ function ResultsScreen({ data }) {
 
   return (
     <div className="fade-stagger">
-      <SHead title="WYNIKI" sub="Nasze osiagniecia na zawodach" />
+      <SHead title="WYNIKI" sub="Nasze osiągnięcia na zawodach" />
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:11, marginBottom:22 }}>
         {[["🥇","ZLOTO",g,GOLD],["🥈","SREBRO",s,SILV],["🥉","BRAZ",b,BRNZ]].map(([ic,lbl,v,col]) => (
           <Card key={lbl} sx={{ padding:"18px 10px", textAlign:"center", position:"relative", overflow:"hidden" }}>
@@ -1561,7 +1555,7 @@ function ResultsScreen({ data }) {
         </Card>
       ))}
       {data.races.filter(r => (r.results || []).length > 0).length === 0 && (
-        <div style={{ color:MUTED, textAlign:"center", padding:"36px 0", fontSize:14 }}>Brak wynikow do wyswietlenia</div>
+        <div style={{ color:MUTED, textAlign:"center", padding:"36px 0", fontSize:14 }}>Brak wyników do wyświetlenia</div>
       )}
     </div>
   );
@@ -1657,7 +1651,7 @@ function TeamScreen({ data }) {
             )}
             {hist.length > 0 && (
               <Card sx={{ padding:"4px 0", marginBottom:14 }}>
-                <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, padding:"14px 16px 9px", textTransform:"uppercase" }}>HISTORIA STARTOW</div>
+                <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, padding:"14px 16px 9px", textTransform:"uppercase" }}>HISTORIA STARTÓW</div>
                 {hist.map((h, i) => (
                   <div key={i} style={{ display:"flex", alignItems:"center", gap:11, padding:"10px 16px", borderTop:"1px solid " + BDR }}>
                     <div style={{ width:34, height:34, borderRadius:"50%", background:SURF2, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0, border:"1px solid " + BDR }}>
@@ -1671,7 +1665,7 @@ function TeamScreen({ data }) {
                 ))}
               </Card>
             )}
-            {hist.length === 0 && <div style={{ color:MUTED, fontSize:13, textAlign:"center", padding:"24px 0" }}>Brak startow w historii</div>}
+            {hist.length === 0 && <div style={{ color:MUTED, fontSize:13, textAlign:"center", padding:"24px 0" }}>Brak startów w historii</div>}
           </DetailSheet>
         );
       })()}
@@ -1707,12 +1701,12 @@ function SponsorsScreen({ data, setData, currentUser, toast }) {
 
   function delSponsor(id) {
     setData(d => ({ ...d, sponsors: d.sponsors.filter(s => s.id !== id) }));
-    toast("Sponsor usuniety");
+    toast("Sponsor usunięty");
   }
 
   return (
     <div className="fade-stagger">
-      <SHead title="SPONSORZY" sub="Nasi partnerzy i wspierajacy"
+      <SHead title="SPONSORZY" sub="Nasi partnerzy i wspierający"
         action={isAdmin && <Btn size="sm" onClick={() => { setForm({ name:"", tier:"Silver", logo:"", desc:"", web:"" }); setEditSp(null); setShowForm(true); }}><IPlus /> DODAJ</Btn>}
       />
 
@@ -1756,7 +1750,7 @@ function SponsorsScreen({ data, setData, currentUser, toast }) {
       {data.sponsors.length === 0 && (
         <div style={{ color:MUTED, textAlign:"center", padding:"44px 0", fontSize:14 }}>
           <div style={{ fontSize:36, marginBottom:13 }}>🤝</div>
-          {isAdmin ? "Dodaj pierwszego sponsora!" : "Brak sponsorow"}
+          {isAdmin ? "Dodaj pierwszego sponsora!" : "Brak sponsorów"}
         </div>
       )}
 
@@ -1765,7 +1759,7 @@ function SponsorsScreen({ data, setData, currentUser, toast }) {
           <TInput label="Nazwa firmy" value={form.name} onChange={sf("name")} placeholder="Firma XYZ" />
           <TInput label="Skrot / logo (2-3 litery)" value={form.logo} onChange={sf("logo")} placeholder="XYZ" />
           <TSel label="Poziom sponsoringu" value={form.tier} onChange={sf("tier")} opts={["Platinum","Gold","Silver"]} />
-          <TInput label="Opis dzialalnosci" value={form.desc} onChange={sf("desc")} placeholder="Producent odziezy sportowej" />
+          <TInput label="Opis działalności" value={form.desc} onChange={sf("desc")} placeholder="Producent odziezy sportowej" />
           <TInput label="Strona www" value={form.web} onChange={sf("web")} placeholder="https://..." />
           <div style={{ display:"flex", gap:11, marginTop:6 }}>
             <Btn full onClick={saveSponsor}>{editSp ? "ZAPISZ ZMIANY" : "DODAJ SPONSORA"}</Btn>
@@ -1803,10 +1797,10 @@ function AboutScreen({ data }) {
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:18 }}>
         {[
-          { v: team.length + "+",    l:"CZLONKOW",    ic:"👥" },
+          { v: team.length + "+",    l:"CZŁONKÓW",    ic:"👥" },
           { v: rides.filter(r => r.status === "done").length + "+", l:"COFFEE RIDE", ic:"☕" },
           { v: totalMedals + "+",    l:"MEDALI",      ic:"🏆" },
-          { v: site.founded,         l:"ROK ZALOZENIA",ic:"📅" },
+          { v: site.founded,         l:"ROK ZAŁOŻENIA",ic:"📅" },
         ].map(s => (
           <Card key={s.l} sx={{ padding:"18px 16px", display:"flex", alignItems:"center", gap:13 }}>
             <span style={{ fontSize:28 }}>{s.ic}</span>
@@ -1829,7 +1823,7 @@ function AboutScreen({ data }) {
 
       {site.joinText && (
         <Card sx={{ padding:"20px 18px", marginBottom:18, border:"1px solid " + REDB }}>
-          <div style={{ fontFamily:FT, fontSize:10, color:RED, letterSpacing:2.2, marginBottom:11, textTransform:"uppercase" }}>CHCESZ DOLACZYC?</div>
+          <div style={{ fontFamily:FT, fontSize:10, color:RED, letterSpacing:2.2, marginBottom:11, textTransform:"uppercase" }}>CHCESZ DOŁĄCZYĆ?</div>
           <p style={{ color:SUB, fontSize:13, lineHeight:1.65, margin:0 }}>
             {site.joinText}
           </p>
@@ -1860,7 +1854,7 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
     const f = e.target.files[0];
     if (!f) return;
     const rr = new FileReader();
-    rr.onload = ev => { upd({ avatar: ev.target.result }); toast("Zdjecie zaktualizowane!"); };
+    rr.onload = ev => { upd({ avatar: ev.target.result }); toast("Zdjęcie zaktualizowane!"); };
     rr.readAsDataURL(f);
   }
 
@@ -1872,12 +1866,12 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
   }
 
   function savePw() {
-    if (pwForm.cur !== u.pass)        { toast("Obecne haslo nieprawidlowe", "error"); return; }
-    if (pwForm.next.length < 6)       { toast("Nowe haslo min. 6 znakow", "error"); return; }
-    if (pwForm.next !== pwForm.con)   { toast("Hasla sie nie zgadzaja", "error"); return; }
+    if (pwForm.cur !== u.pass)        { toast("Obecne hasło nieprawidlowe", "error"); return; }
+    if (pwForm.next.length < 6)       { toast("Nowe hasło min. 6 znakow", "error"); return; }
+    if (pwForm.next !== pwForm.con)   { toast("Hasła się nie zgadzają", "error"); return; }
     upd({ pass: pwForm.next });
     setShowPw(false);
-    toast("Haslo zmienione!");
+    toast("Hasło zmienione!");
   }
 
   return (
@@ -1930,8 +1924,8 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
         <div style={{ padding:"13px 17px", borderBottom:"1px solid " + BDR, fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, textTransform:"uppercase" }}>POWIADOMIENIA PUSH</div>
         {[
           { k:"nr",  l:"Nowe Coffee Rides" },
-          { k:"nra", l:"Starty zawodow"    },
-          { k:"nn",  l:"Aktualnosci teamu" },
+          { k:"nra", l:"Starty zawodów"    },
+          { k:"nn",  l:"Aktualności teamu" },
         ].map((item, i, arr) => (
           <div key={item.k} style={{ padding:"14px 17px", borderBottom: i < arr.length - 1 ? "1px solid " + BDR : "none", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <span style={{ fontSize:13 }}>{item.l}</span>
@@ -1940,11 +1934,11 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
         ))}
       </Card>
 
-      <Btn full v="danger" onClick={onLogout}><ILogout /> WYLOGUJ SIE</Btn>
+      <Btn full v="danger" onClick={onLogout}><ILogout /> WYLOGUJ SIĘ</Btn>
 
       {showEdit && (
         <Sheet title="EDYTUJ PROFIL" onClose={() => setShowEdit(false)}>
-          <TInput label="Imie i nazwisko" value={eForm.name} onChange={e => setEForm(f => ({ ...f, name:e.target.value }))} />
+          <TInput label="Imię i nazwisko" value={eForm.name} onChange={e => setEForm(f => ({ ...f, name:e.target.value }))} />
           <TInput label="Rok urodzenia" type="number" value={eForm.year} onChange={e => setEForm(f => ({ ...f, year:e.target.value }))} placeholder="np. 1985"
             hint={eForm.year ? "Kategoria: " + getCat(eForm.year) : ""} />
           <div style={{ display:"flex", gap:11 }}>
@@ -1955,12 +1949,12 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
       )}
 
       {showPw && (
-        <Sheet title="ZMIEN HASLO" onClose={() => setShowPw(false)}>
-          <TInput label="Obecne haslo" type="password" value={pwForm.cur} onChange={e => setPwForm(f => ({ ...f, cur:e.target.value }))} />
-          <TInput label="Nowe haslo" type="password" value={pwForm.next} onChange={e => setPwForm(f => ({ ...f, next:e.target.value }))} hint="Minimum 6 znakow" />
-          <TInput label="Potwierdz nowe haslo" type="password" value={pwForm.con} onChange={e => setPwForm(f => ({ ...f, con:e.target.value }))} />
+        <Sheet title="ZMIEŃ HASŁO" onClose={() => setShowPw(false)}>
+          <TInput label="Obecne hasło" type="password" value={pwForm.cur} onChange={e => setPwForm(f => ({ ...f, cur:e.target.value }))} />
+          <TInput label="Nowe hasło" type="password" value={pwForm.next} onChange={e => setPwForm(f => ({ ...f, next:e.target.value }))} hint="Minimum 6 znaków" />
+          <TInput label="Potwierdź nowe hasło" type="password" value={pwForm.con} onChange={e => setPwForm(f => ({ ...f, con:e.target.value }))} />
           <div style={{ display:"flex", gap:11 }}>
-            <Btn full onClick={savePw}>ZMIEN HASLO</Btn>
+            <Btn full onClick={savePw}>ZMIEŃ HASŁO</Btn>
             <Btn full v="ghost" onClick={() => setShowPw(false)}>ANULUJ</Btn>
           </div>
         </Sheet>
@@ -2000,7 +1994,7 @@ function NotifsScreen({ data, setData }) {
           </div>
         </div>
       ))}
-      {(data.notifs || []).length === 0 && <div style={{ color:MUTED, textAlign:"center", padding:"44px 0", fontSize:14 }}>Brak powiadomien</div>}
+      {(data.notifs || []).length === 0 && <div style={{ color:MUTED, textAlign:"center", padding:"44px 0", fontSize:14 }}>Brak powiadomień</div>}
     </div>
   );
 }
@@ -2037,14 +2031,14 @@ function AdminScreen({ data, setData, toast }) {
     const n = { id:"n" + Date.now(), type:nlForm.type, title:nlForm.title, body:nlForm.body, time:"teraz", read:false };
     setData(d => ({ ...d, notifs:[n, ...d.notifs] }));
     setNlForm({ title:"", body:"", type:"news" });
-    toast("Powiadomienie wyslane do wszystkich!");
+    toast("Powiadomienie wysłane do wszystkich!");
   }
 
   const TABS = [{ id:"site", l:"Strona" },{ id:"users", l:"Uzytkownicy" },{ id:"social", l:"Social" },{ id:"notif", l:"Powiadomienia" }];
 
   return (
     <div className="fade-stagger">
-      <SHead title="PANEL ADMINA" sub="Zarzadzanie Wataha" />
+      <SHead title="PANEL ADMINA" sub="Zarządzanie Watahą" />
       <div style={{ display:"flex", gap:3, background:SURF2, borderRadius:11, padding:3, marginBottom:20, overflowX:"auto" }}>
         {TABS.map(t => (
           <button key={t.id} onClick={() => setTab(t.id)} className="no-tap" style={{ flex:"0 0 auto", background: tab === t.id ? RED : "transparent", border:"none", borderRadius:9, padding:"9px 16px", color: tab === t.id ? "#fff" : SUB, fontFamily:FT, fontWeight:600, fontSize:11, letterSpacing:0.6, cursor:"pointer", textTransform:"uppercase", boxShadow: tab === t.id ? "0 4px 12px rgba(255,0,38,0.30)" : "none", transition:"background 0.25s ease, color 0.25s ease" }}>
@@ -2058,19 +2052,19 @@ function AdminScreen({ data, setData, toast }) {
           <Card sx={{ padding:18, marginBottom:13 }}>
             <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, marginBottom:14, textTransform:"uppercase" }}>TEKSTY STRONY</div>
             <TInput label="Nazwa klubu"  value={site.clubName}  onChange={ssf("clubName")}  />
-            <TInput label="Podtytul"     value={site.subtitle}  onChange={ssf("subtitle")}  />
+            <TInput label="Podtytuł"     value={site.subtitle}  onChange={ssf("subtitle")}  />
             <TArea  label="Motto"        value={site.motto}     onChange={ssf("motto")}     />
             <TArea  label="Tekst O nas"  value={site.aboutText || ""} onChange={ssf("aboutText")} />
-            <TArea  label="Tekst Dolacz do nas" value={site.joinText || ""} onChange={ssf("joinText")} placeholder="Jesli interesujesz sie kolarstwem..." />
+            <TArea  label="Tekst Dołącz do nas" value={site.joinText || ""} onChange={ssf("joinText")} placeholder="Jesli interesujesz sie kolarstwem..." />
             <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
               <TInput label="Miasto"         value={site.city}    onChange={ssf("city")}    />
               <TInput label="Rok zalozenia"  value={site.founded} onChange={ssf("founded")} />
             </div>
           </Card>
           <Card sx={{ padding:18, marginBottom:13 }}>
-            <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, marginBottom:14, textTransform:"uppercase" }}>LOGO I TLO HERO</div>
+            <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, marginBottom:14, textTransform:"uppercase" }}>LOGO I TŁO HERO</div>
             <TSel label="Typ logo" value={site.logoType} onChange={ssf("logoType")}
-              opts={[{ v:"real", l:"Logo klubu (oficjalne)" },{ v:"paw", l:"Lapa wilka" },{ v:"text", l:"Inicjaly" },{ v:"image", l:"Wlasne zdjecie" }]} />
+              opts={[{ v:"real", l:"Logo klubu (oficjalne)" },{ v:"paw", l:"Łapa wilka" },{ v:"text", l:"Inicjały" },{ v:"image", l:"Własne zdjęcie" }]} />
             {site.logoType === "image" && (
               <div style={{ display:"flex", gap:11, alignItems:"center", marginBottom:13 }}>
                 <input ref={logoRef} type="file" accept="image/*" onChange={e => onImgLoad("logoImage", e)} style={{ display:"none" }} />
@@ -2080,8 +2074,8 @@ function AdminScreen({ data, setData, toast }) {
             )}
             <input ref={heroRef} type="file" accept="image/*" onChange={e => onImgLoad("heroImage", e)} style={{ display:"none" }} />
             <div style={{ display:"flex", gap:9, alignItems:"center", marginBottom:9 }}>
-              <Btn size="sm" v="ghost" onClick={() => heroRef.current.click()}><IPhoto /> Tlo hero</Btn>
-              {site.heroImage && <Btn size="sm" v="danger" onClick={() => setSite(s => ({ ...s, heroImage:null }))}>Usun tlo</Btn>}
+              <Btn size="sm" v="ghost" onClick={() => heroRef.current.click()}><IPhoto /> Tło hero</Btn>
+              {site.heroImage && <Btn size="sm" v="danger" onClick={() => setSite(s => ({ ...s, heroImage:null }))}>Usuń tło</Btn>}
             </div>
             {site.heroImage && <img src={site.heroImage} alt="" style={{ width:"100%", borderRadius:11, maxHeight:100, objectFit:"cover" }} />}
           </Card>
@@ -2091,7 +2085,7 @@ function AdminScreen({ data, setData, toast }) {
 
       {tab === "users" && (
         <div>
-          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, marginBottom:13, textTransform:"uppercase" }}>UZYTKOWNICY ({data.users.length})</div>
+          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, marginBottom:13, textTransform:"uppercase" }}>UŻYTKOWNICY ({data.users.length})</div>
           {data.users.map(u => (
             <Card key={u.id} sx={{ marginBottom:11, padding:"13px 16px" }}>
               <div style={{ display:"flex", gap:13, alignItems:"center", marginBottom:9 }}>
@@ -2140,12 +2134,12 @@ function AdminScreen({ data, setData, toast }) {
 
       {tab === "notif" && (
         <Card sx={{ padding:18 }}>
-          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, marginBottom:14, textTransform:"uppercase" }}>WYSLIJ DO WSZYSTKICH</div>
+          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, marginBottom:14, textTransform:"uppercase" }}>WYŚLIJ DO WSZYSTKICH</div>
           <TSel label="Typ" value={nlForm.type} onChange={e => setNlForm(f => ({ ...f, type:e.target.value }))}
             opts={[{ v:"news", l:"Aktualnosci" },{ v:"ride", l:"Coffee Ride" },{ v:"race", l:"Wyscig" }]} />
           <TInput label="Tytul" value={nlForm.title} onChange={e => setNlForm(f => ({ ...f, title:e.target.value }))} placeholder="Wazna informacja!" />
           <TArea  label="Tresc" value={nlForm.body}  onChange={e => setNlForm(f => ({ ...f, body:e.target.value  }))} placeholder="Wpisz tresc..." />
-          <Btn full onClick={sendNotif} disabled={!nlForm.title || !nlForm.body}><ISend /> WYSLIJ DO WSZYSTKICH</Btn>
+          <Btn full onClick={sendNotif} disabled={!nlForm.title || !nlForm.body}><ISend /> WYŚLIJ DO WSZYSTKICH</Btn>
         </Card>
       )}
     </div>
@@ -2207,9 +2201,9 @@ const BOTTOM_NAV = [
 ];
 
 const DRAWER_NAV = [
-  { id:"home",     Icon: IHome,   l:"STRONA GLOWNA",    admin:false },
+  { id:"home",     Icon: IHome,   l:"STRONA GŁÓWNA",    admin:false },
   { id:"rides",    Icon: ICoffee, l:"COFFEE RIDES",     admin:false },
-  { id:"races",    Icon: IFlag,   l:"STARTY ZAWODOW",   admin:false },
+  { id:"races",    Icon: IFlag,   l:"STARTY ZAWODÓW",   admin:false },
   { id:"results",  Icon: ITrophy, l:"WYNIKI",           admin:false },
   { id:"team",     Icon: IUsers,  l:"ZAWODNICY",        admin:false },
   { id:"sponsors", Icon: IHand,   l:"SPONSORZY",        admin:false },
@@ -2227,6 +2221,14 @@ export default function App() {
   const [toastMsg, setToastMsg] = useState(null);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showInstall,   setShowInstall]   = useState(false);
+  const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 375);
+  const isDesktop = winW >= 768;
+
+  useEffect(() => {
+    const h = () => setWinW(window.innerWidth);
+    window.addEventListener("resize", h);
+    return () => window.removeEventListener("resize", h);
+  }, []);
 
   useEffect(() => {
     const t = setTimeout(() => setLoading(false), 2200);
@@ -2325,7 +2327,7 @@ export default function App() {
   function handleLogin(u)    { setUser(u); setShowAuth(false); toast("Witaj, " + u.name + "!"); }
   function handleRegister(u) { setData(d => ({ ...d, users:[...d.users, u] })); setUser(u); setShowAuth(false); toast("Konto utworzone!"); }
   function handleGuest()     { setShowAuth(false); }
-  function handleLogout()    { setUser(null); setPage("home"); toast("Wylogowano pomyslnie"); }
+  function handleLogout()    { setUser(null); setPage("home"); toast("Wylogowano pomyślnie"); }
 
   if (loading) {
     return (
@@ -2370,124 +2372,194 @@ export default function App() {
     <>
       <style>{GCSS}</style>
 
-      <div style={{ maxWidth:480, margin:"0 auto", minHeight:"100vh", background:BG, position:"relative" }}>
+      {/* ═══ DESKTOP LAYOUT (≥768px) ═══ */}
+      {isDesktop ? (
+        <div style={{ display:"flex", minHeight:"100vh", background:BG }}>
 
-        {/* HEADER */}
-        <div style={{ position:"sticky", top:0, zIndex:200, background:"rgba(8,8,10,0.85)", backdropFilter:"blur(20px) saturate(140%)", WebkitBackdropFilter:"blur(20px) saturate(140%)", borderBottom:"1px solid " + BDR, padding:"11px 14px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
-          <button onClick={() => nav("home")} className="no-tap" style={{ display:"flex", alignItems:"center", gap:11, background:"none", border:"none", cursor:"pointer", color:TEXT }}>
-            <ClubLogo site={data.site} size={36} />
-            <div style={{ textAlign:"left" }}>
-              <div style={{ fontFamily:FT, fontWeight:700, fontSize:14, letterSpacing:2.2, lineHeight:1, textTransform:"uppercase" }}>{data.site.clubName}</div>
-              <div style={{ fontSize:9, color:RED, letterSpacing:1.6, fontFamily:FT, fontWeight:600, textTransform:"uppercase", marginTop:2 }}>{data.site.subtitle}</div>
-            </div>
-          </button>
-
-          <div style={{ display:"flex", gap:5, alignItems:"center" }}>
-            {user && (
-              <button onClick={() => nav("notifs")} className="no-tap"
-                style={{ position:"relative", background: page === "notifs" ? REDD : "none", border: page === "notifs" ? "1px solid " + REDB : "none", borderRadius:9, padding:"8px 9px", color:SUB, cursor:"pointer", display:"flex" }}>
-                <IBell />
-                {unread > 0 && <div style={{ position:"absolute", top:3, right:3, minWidth:16, height:16, padding:"0 4px", borderRadius:8, background:RED, fontSize:9, fontFamily:FT, fontWeight:700, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 10px " + REDG }}>{unread}</div>}
-              </button>
-            )}
-
-            {isAdmin && (
-              <button onClick={() => nav("admin")} className="no-tap"
-                style={{ background: page === "admin" ? GOLD + "22" : "none", border: page === "admin" ? "1px solid " + GOLD + "44" : "none", borderRadius:9, padding:"8px 9px", color: page === "admin" ? GOLD : SUB, cursor:"pointer", display:"flex" }}>
-                <IGear />
-              </button>
-            )}
-
-            {user ? (
-              <button onClick={() => nav("profile")} className="no-tap"
-                style={{ background: page === "profile" ? REDD : "none", border: page === "profile" ? "1px solid " + REDB : "none", borderRadius:9, padding:"6px 7px", color: page === "profile" ? RED : SUB, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-                {user.avatar
-                  ? <img src={user.avatar} alt="" style={{ width:26, height:26, borderRadius:"50%", objectFit:"cover" }} />
-                  : <IUser />
-                }
-              </button>
-            ) : (
-              <button onClick={() => setShowAuth(true)} className="no-tap"
-                style={{ background:REDD, border:"1px solid " + REDB, borderRadius:9, padding:"7px 11px", color:RED, cursor:"pointer", fontFamily:FT, fontWeight:700, fontSize:10, letterSpacing:0.6, textTransform:"uppercase" }}>
-                ZALOGUJ
-              </button>
-            )}
-
-            <button onClick={() => setMenuOpen(m => !m)} className="no-tap"
-              style={{ background: menuOpen ? SURF2 : "none", border:"none", borderRadius:9, padding:"8px 9px", color:TEXT, cursor:"pointer", display:"flex" }}>
-              {menuOpen ? <IClose /> : <IMenu />}
-            </button>
-          </div>
-        </div>
-
-        {/* DRAWER */}
-        {menuOpen && (
-          <div style={{ position:"fixed", inset:0, zIndex:150, display:"flex", animation:"fadeIn 0.2s ease" }} onClick={() => setMenuOpen(false)}>
-            <div style={{ flex:1, background:"rgba(0,0,0,0.78)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)" }} />
-            <div style={{ width:280, background:"#0E0E11", backgroundImage:CARD_GRAD, borderLeft:"1px solid " + BDHI, height:"100%", overflowY:"auto", display:"flex", flexDirection:"column", boxShadow:"-16px 0 48px rgba(0,0,0,0.6)", animation:"sheetIn 0.4s " + SPR }} onClick={e => e.stopPropagation()}>
-              <div style={{ padding:"70px 0 16px" }}>
-                {DRAWER_NAV.filter(n => (!n.admin || isAdmin) && (!n.loggedIn || user)).map(n => (
-                  <button key={n.id} onClick={() => nav(n.id)} className="no-tap" style={{ width:"100%", textAlign:"left", background: page === n.id ? REDD : "transparent", border:"none", borderLeft: page === n.id ? "3px solid " + RED : "3px solid transparent", padding:"14px 20px", cursor:"pointer", color: page === n.id ? RED : SUB, fontFamily:FT, fontWeight:600, fontSize:12, letterSpacing:1.6, display:"flex", alignItems:"center", gap:12, transition:"background 0.25s ease, color 0.25s ease" }}>
-                    <span style={{ display:"flex", color: page === n.id ? RED : MUTED }}><n.Icon /></span>
-                    {n.l}
-                    {n.id === "notifs" && user && unread > 0 && (
-                      <span style={{ background:RED, color:"#fff", borderRadius:10, minWidth:20, height:20, padding:"0 6px", fontSize:9, fontFamily:FT, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 10px " + REDG }}>{unread}</span>
-                    )}
-                  </button>
-                ))}
+          {/* SIDEBAR */}
+          <div style={{ width:234, background:SURF, backgroundImage:CARD_GRAD, borderRight:"1px solid " + BDR, position:"fixed", top:0, left:0, bottom:0, display:"flex", flexDirection:"column", zIndex:100, boxShadow:"4px 0 24px rgba(0,0,0,0.35)" }}>
+            {/* Logo */}
+            <button onClick={() => nav("home")} className="no-tap" style={{ display:"flex", alignItems:"center", gap:12, padding:"20px 18px", background:"none", border:"none", borderBottom:"1px solid " + BDR, cursor:"pointer", color:TEXT, width:"100%", textAlign:"left" }}>
+              <ClubLogo site={data.site} size={42} />
+              <div>
+                <div style={{ fontFamily:FT, fontWeight:700, fontSize:13, letterSpacing:2, textTransform:"uppercase", lineHeight:1.1 }}>{data.site.clubName}</div>
+                <div style={{ fontSize:8, color:RED, letterSpacing:1.8, fontFamily:FT, fontWeight:600, textTransform:"uppercase", marginTop:3 }}>{data.site.subtitle}</div>
               </div>
+            </button>
 
-              <div style={{ marginTop:"auto", padding:"16px 20px", borderTop:"1px solid " + BDR }}>
-                {user ? (
-                  <>
-                    <div style={{ display:"flex", alignItems:"center", gap:11, marginBottom:11 }}>
-                      <Avatar user={(data.users.find(x => x.id === user.id) || user)} size={36} />
-                      <div>
-                        <div style={{ fontSize:13, fontWeight:700 }}>{(data.users.find(x => x.id === user.id) || user).name}</div>
-                        <Pill label={isAdmin ? "ADMIN" : user.role === "rider" ? "ZAWODNIK" : "GOSC"} color={isAdmin ? GOLD : RED} />
-                      </div>
+            {/* Nav items */}
+            <div style={{ flex:1, padding:"8px 0", overflowY:"auto" }}>
+              {DRAWER_NAV.filter(n => (!n.admin || isAdmin) && (!n.loggedIn || user)).map(n => (
+                <button key={n.id} onClick={() => nav(n.id)} className="no-tap" style={{ width:"100%", textAlign:"left", background: page === n.id ? REDD : "transparent", border:"none", borderLeft: page === n.id ? "3px solid " + RED : "3px solid transparent", padding:"13px 20px", cursor:"pointer", color: page === n.id ? RED : SUB, fontFamily:FT, fontWeight:600, fontSize:11, letterSpacing:1.4, display:"flex", alignItems:"center", gap:13, transition:"background 0.22s ease, color 0.22s ease" }}>
+                  <span style={{ display:"flex", color: page === n.id ? RED : MUTED, filter: page === n.id ? "drop-shadow(0 0 6px " + REDG + ")" : "none" }}><n.Icon /></span>
+                  {n.l}
+                  {n.id === "notifs" && user && unread > 0 && (
+                    <span style={{ marginLeft:"auto", background:RED, color:"#fff", borderRadius:10, minWidth:18, height:18, padding:"0 5px", fontSize:9, fontFamily:FT, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 8px " + REDG }}>{unread}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+
+            {/* User section */}
+            <div style={{ padding:"16px 18px", borderTop:"1px solid " + BDR }}>
+              {user ? (
+                <>
+                  <button onClick={() => nav("profile")} className="no-tap" style={{ display:"flex", alignItems:"center", gap:11, marginBottom:12, background:"none", border:"none", cursor:"pointer", color:TEXT, width:"100%", textAlign:"left", padding:0 }}>
+                    <Avatar user={data.users.find(x => x.id === user.id) || user} size={36} ring />
+                    <div style={{ minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{(data.users.find(x => x.id === user.id) || user).name}</div>
+                      <div style={{ marginTop:3 }}><Pill label={isAdmin ? "ADMIN" : user.role === "rider" ? "ZAWODNIK" : "GOŚĆ"} color={isAdmin ? GOLD : RED} /></div>
                     </div>
-                    <Btn size="sm" v="danger" sx={{ width:"100%" }} onClick={handleLogout}><ILogout /> WYLOGUJ</Btn>
-                  </>
-                ) : (
-                  <Btn size="sm" sx={{ width:"100%" }} onClick={() => { setMenuOpen(false); setShowAuth(true); }}>ZALOGUJ SIE</Btn>
+                  </button>
+                  <Btn size="sm" v="danger" sx={{ width:"100%" }} onClick={handleLogout}><ILogout /> WYLOGUJ SIĘ</Btn>
+                </>
+              ) : (
+                <Btn size="sm" sx={{ width:"100%" }} onClick={() => setShowAuth(true)}>ZALOGUJ SIĘ</Btn>
+              )}
+            </div>
+          </div>
+
+          {/* MAIN AREA */}
+          <div style={{ marginLeft:234, flex:1, display:"flex", flexDirection:"column", minHeight:"100vh" }}>
+            {/* Desktop top bar */}
+            <div style={{ position:"sticky", top:0, zIndex:50, background:"rgba(8,8,10,0.88)", backdropFilter:"blur(20px) saturate(140%)", WebkitBackdropFilter:"blur(20px) saturate(140%)", borderBottom:"1px solid " + BDR, padding:"13px 32px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+              <h2 style={{ margin:0, fontFamily:FT, fontSize:18, fontWeight:700, letterSpacing:2.5, color:TEXT, textTransform:"uppercase" }}>
+                {DRAWER_NAV.find(n => n.id === page)?.l || data.site.clubName}
+              </h2>
+              <div style={{ display:"flex", gap:8, alignItems:"center" }}>
+                {user && isAdmin && (
+                  <button onClick={() => nav("admin")} className="no-tap" style={{ background: page === "admin" ? GOLD + "22" : SURF2, border: page === "admin" ? "1px solid " + GOLD + "44" : "1px solid " + BDR, borderRadius:9, padding:"8px 10px", color: page === "admin" ? GOLD : SUB, cursor:"pointer", display:"flex", alignItems:"center", gap:7, fontFamily:FT, fontSize:10, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase" }}>
+                    <IGear /> Panel Admina
+                  </button>
+                )}
+                {!user && (
+                  <Btn size="sm" onClick={() => setShowAuth(true)}>ZALOGUJ SIĘ</Btn>
                 )}
               </div>
             </div>
-          </div>
-        )}
 
-        {/* CONTENT */}
-        <div style={{ padding:"20px 14px 100px" }}>
-          {renderPage()}
-        </div>
-
-        {/* PWA Install banner */}
-        {showInstall && installPrompt && (
-          <div style={{ position:"fixed", bottom:78, left:"50%", transform:"translateX(-50%)", width:"calc(100% - 24px)", maxWidth:456, zIndex:250, background:SURF, backgroundImage:CARD_GRAD_RED, border:"1px solid " + REDB, borderRadius:14, padding:"13px 14px", display:"flex", gap:11, alignItems:"center", boxShadow:"0 16px 48px rgba(0,0,0,0.7), 0 0 24px rgba(255,0,38,0.2)", animation:"fadeUp 0.4s " + SPR }}>
-            <div style={{ flexShrink:0 }}>
-              <ClubLogo site={data.site} size={48} />
-            </div>
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontFamily:FT, fontSize:12, fontWeight:700, letterSpacing:0.6, marginBottom:2, textTransform:"uppercase" }}>ZAINSTALUJ WATAHE</div>
-              <div style={{ fontSize:11, color:SUB, lineHeight:1.4 }}>Dodaj do ekranu glownego — szybszy dostep</div>
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
-              <Btn size="sm" onClick={handleInstall}>ZAINSTALUJ</Btn>
-              <button onClick={dismissInstall} className="no-tap" style={{ background:"none", border:"none", color:MUTED, fontSize:10, fontFamily:FT, cursor:"pointer", letterSpacing:0.6, textTransform:"uppercase" }}>Pozniej</button>
+            {/* Page content — wider on desktop */}
+            <div style={{ padding:"32px 40px 60px", maxWidth:960, width:"100%" }}>
+              {renderPage()}
             </div>
           </div>
-        )}
 
-        {/* BOTTOM NAV with haptic feedback */}
-        <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(8,8,10,0.92)", backdropFilter:"blur(24px) saturate(140%)", WebkitBackdropFilter:"blur(24px) saturate(140%)", borderTop:"1px solid " + BDR, display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom, 0px)", boxShadow:"0 -8px 32px rgba(0,0,0,0.6)" }}>
-          {BOTTOM_NAV.map(n => (
-            <NavBtn key={n.id} active={page === n.id} onClick={() => nav(n.id)} Icon={n.Icon} label={n.l} />
-          ))}
+          {toastMsg && <Toast {...toastMsg} onDone={() => setToastMsg(null)} />}
         </div>
 
-        {toastMsg && <Toast {...toastMsg} onDone={() => setToastMsg(null)} />}
-      </div>
+      ) : (
+
+        /* ═══ MOBILE LAYOUT (<768px) ═══ */
+        <div style={{ maxWidth:480, margin:"0 auto", minHeight:"100vh", background:BG, position:"relative" }}>
+
+          {/* HEADER */}
+          <div style={{ position:"sticky", top:0, zIndex:200, background:"rgba(8,8,10,0.85)", backdropFilter:"blur(20px) saturate(140%)", WebkitBackdropFilter:"blur(20px) saturate(140%)", borderBottom:"1px solid " + BDR, padding:"11px 14px", display:"flex", alignItems:"center", justifyContent:"space-between" }}>
+            <button onClick={() => nav("home")} className="no-tap" style={{ display:"flex", alignItems:"center", gap:11, background:"none", border:"none", cursor:"pointer", color:TEXT }}>
+              <ClubLogo site={data.site} size={36} />
+              <div style={{ textAlign:"left" }}>
+                <div style={{ fontFamily:FT, fontWeight:700, fontSize:14, letterSpacing:2.2, lineHeight:1, textTransform:"uppercase" }}>{data.site.clubName}</div>
+                <div style={{ fontSize:9, color:RED, letterSpacing:1.6, fontFamily:FT, fontWeight:600, textTransform:"uppercase", marginTop:2 }}>{data.site.subtitle}</div>
+              </div>
+            </button>
+
+            <div style={{ display:"flex", gap:5, alignItems:"center" }}>
+              {user && (
+                <button onClick={() => nav("notifs")} className="no-tap"
+                  style={{ position:"relative", background: page === "notifs" ? REDD : "none", border: page === "notifs" ? "1px solid " + REDB : "none", borderRadius:9, padding:"8px 9px", color:SUB, cursor:"pointer", display:"flex" }}>
+                  <IBell />
+                  {unread > 0 && <div style={{ position:"absolute", top:3, right:3, minWidth:16, height:16, padding:"0 4px", borderRadius:8, background:RED, fontSize:9, fontFamily:FT, fontWeight:700, color:"#fff", display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 10px " + REDG }}>{unread}</div>}
+                </button>
+              )}
+              {isAdmin && (
+                <button onClick={() => nav("admin")} className="no-tap"
+                  style={{ background: page === "admin" ? GOLD + "22" : "none", border: page === "admin" ? "1px solid " + GOLD + "44" : "none", borderRadius:9, padding:"8px 9px", color: page === "admin" ? GOLD : SUB, cursor:"pointer", display:"flex" }}>
+                  <IGear />
+                </button>
+              )}
+              {user ? (
+                <button onClick={() => nav("profile")} className="no-tap"
+                  style={{ background: page === "profile" ? REDD : "none", border: page === "profile" ? "1px solid " + REDB : "none", borderRadius:9, padding:"6px 7px", color: page === "profile" ? RED : SUB, cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+                  {user.avatar ? <img src={user.avatar} alt="" style={{ width:26, height:26, borderRadius:"50%", objectFit:"cover" }} /> : <IUser />}
+                </button>
+              ) : (
+                <button onClick={() => setShowAuth(true)} className="no-tap"
+                  style={{ background:REDD, border:"1px solid " + REDB, borderRadius:9, padding:"7px 11px", color:RED, cursor:"pointer", fontFamily:FT, fontWeight:700, fontSize:10, letterSpacing:0.6, textTransform:"uppercase" }}>
+                  ZALOGUJ
+                </button>
+              )}
+              <button onClick={() => setMenuOpen(m => !m)} className="no-tap"
+                style={{ background: menuOpen ? SURF2 : "none", border:"none", borderRadius:9, padding:"8px 9px", color:TEXT, cursor:"pointer", display:"flex" }}>
+                {menuOpen ? <IClose /> : <IMenu />}
+              </button>
+            </div>
+          </div>
+
+          {/* DRAWER */}
+          {menuOpen && (
+            <div style={{ position:"fixed", inset:0, zIndex:150, display:"flex", animation:"fadeIn 0.2s ease" }} onClick={() => setMenuOpen(false)}>
+              <div style={{ flex:1, background:"rgba(0,0,0,0.78)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)" }} />
+              <div style={{ width:280, background:"#0E0E11", backgroundImage:CARD_GRAD, borderLeft:"1px solid " + BDHI, height:"100%", overflowY:"auto", display:"flex", flexDirection:"column", boxShadow:"-16px 0 48px rgba(0,0,0,0.6)", animation:"sheetIn 0.4s " + SPR }} onClick={e => e.stopPropagation()}>
+                <div style={{ padding:"70px 0 16px" }}>
+                  {DRAWER_NAV.filter(n => (!n.admin || isAdmin) && (!n.loggedIn || user)).map(n => (
+                    <button key={n.id} onClick={() => nav(n.id)} className="no-tap" style={{ width:"100%", textAlign:"left", background: page === n.id ? REDD : "transparent", border:"none", borderLeft: page === n.id ? "3px solid " + RED : "3px solid transparent", padding:"14px 20px", cursor:"pointer", color: page === n.id ? RED : SUB, fontFamily:FT, fontWeight:600, fontSize:12, letterSpacing:1.6, display:"flex", alignItems:"center", gap:12, transition:"background 0.25s ease, color 0.25s ease" }}>
+                      <span style={{ display:"flex", color: page === n.id ? RED : MUTED }}><n.Icon /></span>
+                      {n.l}
+                      {n.id === "notifs" && user && unread > 0 && (
+                        <span style={{ background:RED, color:"#fff", borderRadius:10, minWidth:20, height:20, padding:"0 6px", fontSize:9, fontFamily:FT, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 10px " + REDG }}>{unread}</span>
+                      )}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ marginTop:"auto", padding:"16px 20px", borderTop:"1px solid " + BDR }}>
+                  {user ? (
+                    <>
+                      <div style={{ display:"flex", alignItems:"center", gap:11, marginBottom:11 }}>
+                        <Avatar user={data.users.find(x => x.id === user.id) || user} size={36} />
+                        <div>
+                          <div style={{ fontSize:13, fontWeight:700 }}>{(data.users.find(x => x.id === user.id) || user).name}</div>
+                          <Pill label={isAdmin ? "ADMIN" : user.role === "rider" ? "ZAWODNIK" : "GOŚĆ"} color={isAdmin ? GOLD : RED} />
+                        </div>
+                      </div>
+                      <Btn size="sm" v="danger" sx={{ width:"100%" }} onClick={handleLogout}><ILogout /> WYLOGUJ SIĘ</Btn>
+                    </>
+                  ) : (
+                    <Btn size="sm" sx={{ width:"100%" }} onClick={() => { setMenuOpen(false); setShowAuth(true); }}>ZALOGUJ SIĘ</Btn>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* CONTENT */}
+          <div style={{ padding:"20px 14px 100px" }}>
+            {renderPage()}
+          </div>
+
+          {/* PWA Install banner */}
+          {showInstall && installPrompt && (
+            <div style={{ position:"fixed", bottom:78, left:"50%", transform:"translateX(-50%)", width:"calc(100% - 24px)", maxWidth:456, zIndex:250, background:SURF, backgroundImage:CARD_GRAD_RED, border:"1px solid " + REDB, borderRadius:14, padding:"13px 14px", display:"flex", gap:11, alignItems:"center", boxShadow:"0 16px 48px rgba(0,0,0,0.7), 0 0 24px rgba(255,0,38,0.2)", animation:"fadeUp 0.4s " + SPR }}>
+              <div style={{ flexShrink:0 }}><ClubLogo site={data.site} size={48} /></div>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontFamily:FT, fontSize:12, fontWeight:700, letterSpacing:0.6, marginBottom:2, textTransform:"uppercase" }}>ZAINSTALUJ WATAHĘ</div>
+                <div style={{ fontSize:11, color:SUB, lineHeight:1.4 }}>Dodaj do ekranu głównego — szybszy dostęp</div>
+              </div>
+              <div style={{ display:"flex", flexDirection:"column", gap:5, flexShrink:0 }}>
+                <Btn size="sm" onClick={handleInstall}>ZAINSTALUJ</Btn>
+                <button onClick={dismissInstall} className="no-tap" style={{ background:"none", border:"none", color:MUTED, fontSize:10, fontFamily:FT, cursor:"pointer", letterSpacing:0.6, textTransform:"uppercase" }}>Później</button>
+              </div>
+            </div>
+          )}
+
+          {/* BOTTOM NAV */}
+          <div style={{ position:"fixed", bottom:0, left:"50%", transform:"translateX(-50%)", width:"100%", maxWidth:480, background:"rgba(8,8,10,0.92)", backdropFilter:"blur(24px) saturate(140%)", WebkitBackdropFilter:"blur(24px) saturate(140%)", borderTop:"1px solid " + BDR, display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom, 0px)", boxShadow:"0 -8px 32px rgba(0,0,0,0.6)" }}>
+            {BOTTOM_NAV.map(n => (
+              <NavBtn key={n.id} active={page === n.id} onClick={() => nav(n.id)} Icon={n.Icon} label={n.l} />
+            ))}
+          </div>
+
+          {toastMsg && <Toast {...toastMsg} onDone={() => setToastMsg(null)} />}
+        </div>
+      )}
     </>
   );
 }
