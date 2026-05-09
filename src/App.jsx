@@ -774,15 +774,6 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
         PRZEGLĄDAJ BEZ LOGOWANIA →
       </button>
 
-      <div style={{ background:SURF, backgroundImage:CARD_GRAD, borderRadius:13, padding:"13px 18px", width:"100%", maxWidth:400, border:"1px solid " + BDR, animation:"fadeUp 0.55s " + SPR + " 0.22s both" }}>
-        <div style={{ fontSize:10, color:MUTED, letterSpacing:1.4, fontFamily:FT, marginBottom:9, textTransform:"uppercase" }}>DEMO — KONTA TESTOWE</div>
-        {[["arek@wataha.pl","arek123","Admin"],["konrad@wataha.pl","konrad123","Zawodnik"]].map(([e,p,r]) => (
-          <div key={e} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5 }}>
-            <span style={{ fontSize:11, color:SUB }}>{e} / {p}</span>
-            <Pill label={r} color={r === "Admin" ? GOLD : RED} />
-          </div>
-        ))}
-      </div>
     </div>
   );
 }
@@ -2338,12 +2329,7 @@ export default function App() {
 
   // ── SUPABASE AUTH ─────────────────────────────────────────
   useEffect(() => {
-    // Sprawdź aktywną sesję
-    sb.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) loadProfile(session.user);
-    });
-
-    // Słuchaj zmian sesji
+    // onAuthStateChange obsługuje też przywracanie sesji przy odświeżeniu (INITIAL_SESSION)
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         authUidRef.current = session.user.id;
@@ -2353,7 +2339,6 @@ export default function App() {
         setUser(null);
       }
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -2374,22 +2359,7 @@ export default function App() {
   });
 
   useEffect(() => {
-    // Sprawdź sesję — to jedyne co blokuje loading screen
-    const init = async () => {
-      try {
-        const { data: { session } } = await sb.auth.getSession();
-        if (session?.user) {
-          authUidRef.current = session.user.id;
-          await loadProfile(session.user);
-        }
-      } catch(e) {
-        console.warn("Session check error:", e);
-      } finally {
-      }
-    };
-    init();
-
-    // Dane ładują się w tle — nie blokują UI
+    // Dane ładują się w tle — auth obsługuje onAuthStateChange
     loadAllData();
 
     // Real-time subskrypcje
