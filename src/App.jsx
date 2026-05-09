@@ -1,4 +1,25 @@
 import { useState, useRef, useEffect } from "react";
+import { createClient } from "@supabase/supabase-js";
+
+// ── SUPABASE ──────────────────────────────────────────────────
+const SB_URL = "https://draodfwnnevnulgwessi.supabase.co";
+const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyYW9kZndubmV2bnVsZ3dlc3NpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTYxNjYsImV4cCI6MjA5MzgzMjE2Nn0.M06KFgtI-BVbhXMfjJITYSpko9ocBTux626KL976KEU";
+const sb = createClient(SB_URL, SB_KEY);
+
+// ── STORAGE HELPERS ───────────────────────────────────────────
+async function uploadFile(bucket, path, file) {
+  const { error } = await sb.storage.from(bucket).upload(path, file, { upsert:true });
+  if (error) throw error;
+  const { data: { publicUrl } } = sb.storage.from(bucket).getPublicUrl(path);
+  return publicUrl;
+}
+
+async function b64ToStorage(bucket, path, b64) {
+  if (!b64 || !b64.startsWith("data:")) return b64; // już URL lub pusty
+  const res  = await fetch(b64);
+  const blob = await res.blob();
+  return uploadFile(bucket, path, blob);
+}
 
 // ═══════════════════════════════════════════════════════════════
 // COLORS — Whoop-inspired premium dark fitness palette
@@ -214,7 +235,28 @@ const INIT_NOTIFS = [
   { id:"n3", type:"news", title:"Nowy zawodnik!",         body:"Tomek W. dołączył do Watahy. Witamy!",          time:"3 dni temu",   read:true  },
 ];
 
-// ── MEDAL HELPERS ─────────────────────────────────────────────
+// ── DB ↔ APP TRANSFORMACJE ────────────────────────────────────
+function rideFromDB(r) {
+  return { id:r.id, rideNum:r.ride_num||0, title:r.title, date:r.date, time:r.time, km:+r.km||0, elev:+r.elev||0, avg:r.avg||"", desc:r.description||"", gpx:r.gpx||null, gpxText:r.gpx_text||null, gpxUrl:r.gpx_url||"", img:r.img||WOLF_BG, status:r.status, sent:r.sent||false, meet:r.meet||"" };
+}
+function rideToDB(r) {
+  return { id:r.id, ride_num:r.rideNum||0, title:r.title, date:r.date, time:r.time, km:r.km||0, elev:r.elev||0, avg:r.avg||"", description:r.desc||"", gpx:r.gpx||"", gpx_text:r.gpxText||"", gpx_url:r.gpxUrl||"", img:(r.img&&r.img!==WOLF_BG)?r.img:"", status:r.status, sent:r.sent||false, meet:r.meet||"" };
+}
+function raceFromDB(r) {
+  return { id:r.id, name:r.name, sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||null, results:(r.race_results||[]).map(x=>({ uid:x.uid||"", name:x.name, cat:x.cat||"", dist:x.dist||"", place:x.place||null, medal:x.medal||null, _rid:x.id })) };
+}
+function raceToDB(r) {
+  return { id:r.id, name:r.name, sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||"" };
+}
+function siteFromDB(rows) {
+  const s = {}; (rows||[]).forEach(r => { s[r.key] = r.value; }); return { ...INIT_SITE, ...s };
+}
+function profileFromDB(p) {
+  return { id:p.id, email:"", name:p.name||"", role:p.role||"user", inTeam:p.in_team||false, birthYear:p.birth_year||"", avatar:p.avatar_url||null, nr:p.nr!==false, nra:p.nra||false, nn:p.nn!==false };
+}
+function notifFromDB(n, uid) {
+  return { id:n.id, type:n.type||"news", title:n.title, body:n.body||"", time:n.time_label||"teraz", read:Array.isArray(n.read_by)&&uid?n.read_by.includes(uid):false };
+}
 function userMedals(uid, races) {
   let g = 0, s = 0, b = 0;
   races.forEach(r => {
@@ -653,19 +695,26 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
   async function submit() {
     if (!validate()) return;
     setBusy(true);
-    await new Promise(r => setTimeout(r, 600));
-    if (mode === "login") {
-      const u = users.find(x => x.email === form.email && x.pass === form.pass);
-      if (!u) { setErrs({ email:"Nieprawidłowy email lub hasło" }); setBusy(false); return; }
-      onLogin(u);
-    } else {
-      if (users.find(x => x.email === form.email)) { setErrs({ email:"Ten email jest już zajęty" }); setBusy(false); return; }
-      const nu = {
-        id: "u" + Date.now(), name:form.name, email:form.email, pass:form.pass,
-        role:"user", inTeam:false, birthYear:form.year,
-        avatar:null, nr:true, nra:true, nn:true,
-      };
-      onRegister(nu);
+    try {
+      if (mode === "login") {
+        const { error } = await sb.auth.signInWithPassword({ email: form.email, password: form.pass });
+        if (error) { setErrs({ email: "Nieprawidłowy email lub hasło" }); setBusy(false); return; }
+        onGuest(); // zamknij ekran — auth state obsługuje App
+      } else {
+        const { error } = await sb.auth.signUp({
+          email: form.email, password: form.pass,
+          options: { data: { name: form.name, birth_year: form.year } },
+        });
+        if (error) {
+          if (error.message.includes("already")) setErrs({ email: "Ten email jest już zajęty" });
+          else setErrs({ email: error.message });
+          setBusy(false); return;
+        }
+        onGuest();
+        toast("Konto utworzone! Możesz się zalogować.");
+      }
+    } catch (e) {
+      setErrs({ email: "Błąd połączenia z serwerem" });
     }
     setBusy(false);
   }
@@ -1058,32 +1107,45 @@ function RidesScreen({ data, setData, currentUser, toast }) {
     }
   }
 
-  function save() {
+  async function save() {
     if (!form.title || !form.date) return;
     const isUpcoming = new Date(form.date) > new Date();
     const rideNum    = nextRideId();
     const rideId     = "CR-" + new Date().getFullYear() + "-" + String(rideNum).padStart(3, "0");
-    const coverImg   = form.img || WOLF_BG;
+    let coverImg = form.img || WOLF_BG;
+    // Wgraj zdjęcie do Storage jeśli to base64
+    if (form.img && form.img.startsWith("data:")) {
+      try { coverImg = await b64ToStorage("ride-images", `${rideId}/cover.jpg`, form.img); }
+      catch(e) { coverImg = WOLF_BG; }
+    }
     if (editing) {
-      setData(d => ({ ...d, rides: d.rides.map(r => r.id === editing.id ? { ...r, ...form, km:+form.km||0, elev:+form.elev||0 } : r) }));
+      let editImg = form.img;
+      if (form.img && form.img.startsWith("data:")) {
+        try { editImg = await b64ToStorage("ride-images", `${editing.id}/cover.jpg`, form.img); } catch(e) {}
+      }
+      const updated = { ...editing, ...form, img: editImg || editing.img, km:+form.km||0, elev:+form.elev||0 };
+      setData(d => ({ ...d, rides: d.rides.map(r => r.id === editing.id ? updated : r) }));
+      await sb.from("rides").update(rideToDB(updated)).eq("id", editing.id);
       toast("Ustawka zaktualizowana!");
       setEditing(null);
     } else {
       const nr = { ...form, id: rideId, rideNum, km:+form.km||0, elev:+form.elev||0, status: isUpcoming ? "upcoming" : "done", sent:false, img: coverImg };
       setData(d => {
-        const notif = { id:"n" + Date.now(), type:"ride", title:"Nowy Coffee Ride!", body: nr.title + " (" + rideId + ") — " + nr.date + " godz. " + nr.time, time:"teraz", read:false };
+        const notif = { id:"n"+Date.now(), type:"ride", title:"Nowy Coffee Ride!", body:nr.title+" ("+rideId+") — "+nr.date+" godz. "+nr.time, time:"teraz", read:false };
         return { ...d, rides:[nr, ...d.rides], notifs:[notif, ...d.notifs] };
       });
+      await sb.from("rides").insert(rideToDB(nr));
+      await sb.from("notifications").insert({ id:"n"+Date.now(), type:"ride", title:"Nowy Coffee Ride!", body:nr.title+" ("+rideId+") — "+nr.date+" godz. "+nr.time, time_label:"teraz", read_by:[] });
       toast("Coffee Ride " + rideId + " dodany!");
     }
     setShowForm(false);
     setForm(emptyForm);
   }
 
-  function delRide(id) {
+  async function delRide(id) {
     setData(d => ({ ...d, rides: d.rides.filter(r => r.id !== id) }));
-    setDetail(null);
-    toast("Ustawka usunięta");
+    await sb.from("rides").delete().eq("id", id);
+    setDetail(null); toast("Ustawka usunięta");
   }
 
   async function sendWH(r) {
@@ -1273,33 +1335,42 @@ function RacesScreen({ data, setData, currentUser, toast }) {
   function updDist(i, k, v) { setForm(f => ({ ...f, dists: f.dists.map((d, idx) => idx === i ? { ...d, [k]:v } : d) })); }
   function delDist(i)       { setForm(f => ({ ...f, dists: f.dists.filter((_, idx) => idx !== i) })); }
 
-  function saveRace() {
+  async function saveRace() {
     if (!form.name || !form.date) return;
-    const cleaned = { ...form, dists: form.dists.map(d => ({ ...d, km:+d.km || 0 })) };
+    let logo = form.logo;
+    if (logo && logo.startsWith("data:")) {
+      const raceId = editRace ? editRace.id : "rc" + Date.now();
+      try { logo = await b64ToStorage("race-logos", `${raceId}/logo.jpg`, logo); } catch(e) {}
+    }
+    const cleaned = { ...form, logo, dists: form.dists.map(d => ({ ...d, km:+d.km || 0 })) };
     if (editRace) {
       setData(d => ({ ...d, races: d.races.map(r => r.id === editRace.id ? { ...r, ...cleaned } : r) }));
-      toast("Start zaktualizowany!");
-      setEditRace(null);
+      await sb.from("races").update(raceToDB(cleaned)).eq("id", editRace.id);
+      toast("Start zaktualizowany!"); setEditRace(null);
     } else {
-      const nr = { ...cleaned, id:"rc" + Date.now(), status: new Date(form.date) > new Date() ? "upcoming" : "done", results:[] };
+      const nr = { ...cleaned, id:"rc"+Date.now(), status: new Date(form.date) > new Date() ? "upcoming" : "done", results:[] };
       setData(d => {
-        const notif = { id:"n" + Date.now(), type:"race", title:"Nowy start w kalendarzu!", body: nr.name + " — " + nr.date + ", " + nr.loc, time:"teraz", read:false };
+        const notif = { id:"n"+Date.now(), type:"race", title:"Nowy start w kalendarzu!", body:nr.name+" — "+nr.date+", "+nr.loc, time:"teraz", read:false };
         return { ...d, races:[nr, ...d.races], notifs:[notif, ...d.notifs] };
       });
+      await sb.from("races").insert(raceToDB(nr));
+      await sb.from("notifications").insert({ id:"n"+Date.now(), type:"race", title:"Nowy start w kalendarzu!", body:nr.name+" — "+nr.date+", "+nr.loc, time_label:"teraz", read_by:[] });
       toast("Start dodany!");
     }
-    setShowForm(false);
-    setForm(emptyR);
+    setShowForm(false); setForm(emptyR);
   }
 
-  function saveResult(raceId) {
+  async function saveResult(raceId) {
     if (!resForm.name) return;
     const res = { ...resForm, medal: resForm.medal === "none" ? null : resForm.medal, place:+resForm.place || null };
     if (editResIdx !== null) {
+      const existing = data.races.find(r => r.id === raceId)?.results[editResIdx];
       setData(d => ({ ...d, races: d.races.map(r => r.id === raceId ? { ...r, results: r.results.map((x, i) => i === editResIdx ? res : x) } : r) }));
+      if (existing?._rid) await sb.from("race_results").update({ uid:res.uid||"", name:res.name, cat:res.cat, dist:res.dist, place:res.place, medal:res.medal }).eq("id", existing._rid);
       toast("Wynik zaktualizowany!");
     } else {
       setData(d => ({ ...d, races: d.races.map(r => r.id === raceId ? { ...r, results:[...r.results, res] } : r) }));
+      await sb.from("race_results").insert({ race_id:raceId, uid:res.uid||"", name:res.name, cat:res.cat||"", dist:res.dist||"", place:res.place, medal:res.medal });
       toast("Wynik dodany!");
     }
     setResRaceId(null);
@@ -1307,8 +1378,10 @@ function RacesScreen({ data, setData, currentUser, toast }) {
     setResForm(emptyRes);
   }
 
-  function delResult(raceId, idx) {
+  async function delResult(raceId, idx) {
+    const existing = data.races.find(r => r.id === raceId)?.results[idx];
     setData(d => ({ ...d, races: d.races.map(r => r.id === raceId ? { ...r, results: r.results.filter((_, i) => i !== idx) } : r) }));
+    if (existing?._rid) await sb.from("race_results").delete().eq("id", existing._rid);
     toast("Wynik usunięty");
   }
 
@@ -1684,14 +1757,16 @@ function SponsorsScreen({ data, setData, currentUser, toast }) {
   const sf = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
   const TC = { Platinum:GOLD, Gold:SILV, Silver:BRNZ };
 
-  function saveSponsor() {
+  async function saveSponsor() {
     if (!form.name) return;
     if (editSp) {
       setData(d => ({ ...d, sponsors: d.sponsors.map(s => s.id === editSp.id ? { ...s, ...form } : s) }));
+      await sb.from("sponsors").update({ name:form.name, tier:form.tier, logo:form.logo||"", description:form.desc||"", web:form.web||"" }).eq("id", editSp.id);
       toast("Sponsor zaktualizowany!");
     } else {
       const ns = { ...form, id:"s" + Date.now() };
       setData(d => ({ ...d, sponsors:[...d.sponsors, ns] }));
+      await sb.from("sponsors").insert({ id:ns.id, name:ns.name, tier:ns.tier, logo:ns.logo||"", description:ns.desc||"", web:ns.web||"" });
       toast("Sponsor dodany!");
     }
     setShowForm(false);
@@ -1699,8 +1774,9 @@ function SponsorsScreen({ data, setData, currentUser, toast }) {
     setForm({ name:"", tier:"Silver", logo:"", desc:"", web:"" });
   }
 
-  function delSponsor(id) {
+  async function delSponsor(id) {
     setData(d => ({ ...d, sponsors: d.sponsors.filter(s => s.id !== id) }));
+    await sb.from("sponsors").delete().eq("id", id);
     toast("Sponsor usunięty");
   }
 
@@ -1850,12 +1926,19 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
   const med  = userMedals(u.id, data.races);
   const upd  = patch => setData(d => ({ ...d, users: d.users.map(x => x.id === u.id ? { ...x, ...patch } : x) }));
 
-  function handleAvatar(e) {
+  async function handleAvatar(e) {
     const f = e.target.files[0];
     if (!f) return;
-    const rr = new FileReader();
-    rr.onload = ev => { upd({ avatar: ev.target.result }); toast("Zdjęcie zaktualizowane!"); };
-    rr.readAsDataURL(f);
+    try {
+      const ext  = f.name.split(".").pop() || "jpg";
+      const path = `${u.id}/avatar.${ext}`;
+      const url  = await uploadFile("avatars", path, f);
+      upd({ avatar: url });
+      await sb.from("profiles").update({ avatar_url: url }).eq("id", u.id);
+      toast("Zdjęcie zaktualizowane!");
+    } catch(e) {
+      toast("Błąd przesyłania zdjęcia", "error");
+    }
   }
 
   function saveProfile() {
@@ -1929,7 +2012,7 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
         ].map((item, i, arr) => (
           <div key={item.k} style={{ padding:"14px 17px", borderBottom: i < arr.length - 1 ? "1px solid " + BDR : "none", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
             <span style={{ fontSize:13 }}>{item.l}</span>
-            <Toggle on={!!u[item.k]} onChange={() => upd({ [item.k]: !u[item.k] })} />
+            <Toggle on={!!u[item.k]} onChange={async () => { const v = !u[item.k]; upd({ [item.k]: v }); await sb.from("profiles").update({ [item.k]: v }).eq("id", u.id); }} />
           </div>
         ))}
       </Card>
@@ -1968,8 +2051,24 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
 // ═══════════════════════════════════════════════════════════════
 function NotifsScreen({ data, setData }) {
   const unread = (data.notifs || []).filter(n => !n.read).length;
-  const markAll = () => setData(d => ({ ...d, notifs: d.notifs.map(n => ({ ...n, read:true })) }));
-  const markOne = id  => setData(d => ({ ...d, notifs: d.notifs.map(n => n.id === id ? { ...n, read:true } : n) }));
+  const markAll = async () => {
+    setData(d => ({ ...d, notifs: d.notifs.map(n => ({ ...n, read:true })) }));
+    const uid = data.users.find(u => u.id === currentUser?.id)?.id || "";
+    if (!uid) return;
+    await Promise.all(data.notifs.filter(n=>!n.read).map(n =>
+      sb.from("notifications").update({ read_by: [...(Array.isArray(n.read_by)?n.read_by:[]), uid] }).eq("id", n.id)
+    ));
+  };
+  const markOne = async (id) => {
+    setData(d => ({ ...d, notifs: d.notifs.map(n => n.id === id ? { ...n, read:true } : n) }));
+    const uid = currentUser?.id;
+    if (!uid) return;
+    const notif = data.notifs.find(n => n.id === id);
+    const existingReads = Array.isArray(notif?.read_by) ? notif.read_by : [];
+    if (!existingReads.includes(uid)) {
+      await sb.from("notifications").update({ read_by: [...existingReads, uid] }).eq("id", id);
+    }
+  };
   const TI = { ride:"☕", race:"🏁", news:"🐺" };
 
   return (
@@ -2010,8 +2109,13 @@ function AdminScreen({ data, setData, toast }) {
   const heroRef = useRef();
   const ssf = k => e => setSite(s => ({ ...s, [k]: e.target.value }));
 
-  function saveSite() {
+  async function saveSite() {
     setData(d => ({ ...d, site: { ...site } }));
+    // Zapisz każdy klucz do Supabase
+    const updates = Object.entries(site).map(([key, value]) =>
+      sb.from("site_settings").upsert({ key, value: String(value||"") }, { onConflict:"key" })
+    );
+    await Promise.all(updates);
     toast("Ustawienia zapisane!");
   }
 
@@ -2026,10 +2130,12 @@ function AdminScreen({ data, setData, toast }) {
     rr.readAsDataURL(f);
   }
 
-  function sendNotif() {
+  async function sendNotif() {
     if (!nlForm.title || !nlForm.body) return;
-    const n = { id:"n" + Date.now(), type:nlForm.type, title:nlForm.title, body:nlForm.body, time:"teraz", read:false };
+    const id = "n" + Date.now();
+    const n = { id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time:"teraz", read:false };
     setData(d => ({ ...d, notifs:[n, ...d.notifs] }));
+    await sb.from("notifications").insert({ id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time_label:"teraz", read_by:[] });
     setNlForm({ title:"", body:"", type:"news" });
     toast("Powiadomienie wysłane do wszystkich!");
   }
@@ -2097,12 +2203,12 @@ function AdminScreen({ data, setData, toast }) {
               </div>
               <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
                 <button
-                  onClick={() => setData(d => ({ ...d, users: d.users.map(x => x.id === u.id ? { ...x, role: x.role === "admin" ? "rider" : x.role === "rider" ? "user" : "admin" } : x) }))}
+                  onClick={async () => { const newRole = u.role === "admin" ? "rider" : u.role === "rider" ? "user" : "admin"; setData(d => ({ ...d, users: d.users.map(x => x.id === u.id ? { ...x, role: newRole } : x) })); await sb.from("profiles").update({ role: newRole }).eq("id", u.id); }}
                   style={{ background: u.role === "admin" ? GOLD + "22" : u.role === "rider" ? REDD : SURF2, border:"1px solid " + (u.role === "admin" ? GOLD : u.role === "rider" ? RED : BDR) + "44", color: u.role === "admin" ? GOLD : u.role === "rider" ? RED : SUB, borderRadius:7, padding:"6px 11px", cursor:"pointer", fontSize:10, fontFamily:FT, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6 }}>
                   {u.role === "admin" ? "ADMIN" : u.role === "rider" ? "ZAWODNIK" : "USER"} ↕
                 </button>
                 <button
-                  onClick={() => setData(d => ({ ...d, users: d.users.map(x => x.id === u.id ? { ...x, inTeam:!x.inTeam } : x) }))}
+                  onClick={async () => { const newInTeam = !u.inTeam; setData(d => ({ ...d, users: d.users.map(x => x.id === u.id ? { ...x, inTeam: newInTeam } : x) })); await sb.from("profiles").update({ in_team: newInTeam }).eq("id", u.id); }}
                   style={{ background: u.inTeam ? GRN + "22" : SURF2, border:"1px solid " + (u.inTeam ? GRN : BDR) + "44", color: u.inTeam ? GRN : MUTED, borderRadius:7, padding:"6px 11px", cursor:"pointer", fontSize:10, fontFamily:FT, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6 }}>
                   {u.inTeam ? "W TEAMIE" : "+ DO TEAMU"}
                 </button>
@@ -2223,6 +2329,7 @@ export default function App() {
   const [showInstall,   setShowInstall]   = useState(false);
   const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 375);
   const isDesktop = winW >= 768;
+  const authUidRef = useRef(null);
 
   useEffect(() => {
     const h = () => setWinW(window.innerWidth);
@@ -2230,10 +2337,81 @@ export default function App() {
     return () => window.removeEventListener("resize", h);
   }, []);
 
+  // ── SUPABASE AUTH ─────────────────────────────────────────
   useEffect(() => {
-    const t = setTimeout(() => setLoading(false), 2200);
-    return () => clearTimeout(t);
+    // Sprawdź aktywną sesję
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) loadProfile(session.user);
+    });
+
+    // Słuchaj zmian sesji
+    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        authUidRef.current = session.user.id;
+        await loadProfile(session.user);
+      } else {
+        authUidRef.current = null;
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  async function loadProfile(authUser) {
+    const { data: p } = await sb.from("profiles").select("*").eq("id", authUser.id).single();
+    if (p) {
+      const profile = { ...profileFromDB(p), email: authUser.email };
+      setUser(profile);
+      // Zaktualizuj users w data
+      setData(d => ({ ...d, users: d.users.map(u => u.id === p.id ? profile : u).concat(d.users.find(u => u.id === p.id) ? [] : [profile]) }));
+    }
+  }
+
+  // ── ŁADOWANIE DANYCH Z SUPABASE ───────────────────────────
+  const [data, setData] = useState({
+    site: INIT_SITE, users: [], rides: getInitRides(),
+    races: INIT_RACES, sponsors: INIT_SPONSORS, notifs: INIT_NOTIFS,
+  });
+
+  useEffect(() => {
+    loadAllData();
+    // Real-time subskrypcje
+    const ch = sb.channel("wataha-changes")
+      .on("postgres_changes", { event:"*", schema:"public", table:"rides" },        () => loadRides())
+      .on("postgres_changes", { event:"*", schema:"public", table:"races" },        () => loadRaces())
+      .on("postgres_changes", { event:"*", schema:"public", table:"race_results" }, () => loadRaces())
+      .on("postgres_changes", { event:"*", schema:"public", table:"notifications" },() => loadNotifs())
+      .on("postgres_changes", { event:"*", schema:"public", table:"sponsors" },     () => loadSponsors())
+      .subscribe();
+    return () => sb.removeChannel(ch);
+  }, []);
+
+  async function loadAllData() {
+    const [siteRes, ridesRes, racesRes, sponsorsRes, notifsRes, profilesRes] = await Promise.all([
+      sb.from("site_settings").select("*"),
+      sb.from("rides").select("*").order("date", { ascending:false }),
+      sb.from("races").select("*, race_results(*)").order("date", { ascending:false }),
+      sb.from("sponsors").select("*"),
+      sb.from("notifications").select("*").order("created_at", { ascending:false }),
+      sb.from("profiles").select("*"),
+    ]);
+    const uid = authUidRef.current;
+    setData({
+      site:     siteFromDB(siteRes.data),
+      rides:    (ridesRes.data || []).map(rideFromDB),
+      races:    (racesRes.data || []).map(raceFromDB),
+      sponsors: sponsorsRes.data || [],
+      notifs:   (notifsRes.data || []).map(n => notifFromDB(n, uid)),
+      users:    (profilesRes.data || []).map(profileFromDB),
+    });
+    setLoading(false);
+  }
+
+  async function loadRides()    { const { data: r } = await sb.from("rides").select("*").order("date",{ascending:false}); if(r) setData(d=>({...d, rides:r.map(rideFromDB)})); }
+  async function loadRaces()    { const { data: r } = await sb.from("races").select("*, race_results(*)").order("date",{ascending:false}); if(r) setData(d=>({...d, races:r.map(raceFromDB)})); }
+  async function loadSponsors() { const { data: r } = await sb.from("sponsors").select("*"); if(r) setData(d=>({...d, sponsors:r})); }
+  async function loadNotifs()   { const uid=authUidRef.current; const { data: r } = await sb.from("notifications").select("*").order("created_at",{ascending:false}); if(r) setData(d=>({...d, notifs:r.map(n=>notifFromDB(n,uid))})); }
 
   // Service Worker registration
   useEffect(() => {
@@ -2324,10 +2502,13 @@ export default function App() {
   const isAdmin = user && user.role === "admin";
   const unread  = (data.notifs || []).filter(n => !n.read).length;
 
-  function handleLogin(u)    { setUser(u); setShowAuth(false); toast("Witaj, " + u.name + "!"); }
-  function handleRegister(u) { setData(d => ({ ...d, users:[...d.users, u] })); setUser(u); setShowAuth(false); toast("Konto utworzone!"); }
+  function handleLogin(u)    { setShowAuth(false); toast("Witaj, " + (u?.name || "") + "!"); }
+  function handleRegister(u) { setShowAuth(false); }
   function handleGuest()     { setShowAuth(false); }
-  function handleLogout()    { setUser(null); setPage("home"); toast("Wylogowano pomyślnie"); }
+  async function handleLogout() {
+    await sb.auth.signOut();
+    setUser(null); setPage("home"); toast("Wylogowano pomyślnie");
+  }
 
   if (loading) {
     return (
