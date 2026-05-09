@@ -1016,7 +1016,7 @@ function RidesScreen({ data, setData, currentUser, toast }) {
   const imgRef = useRef();
   const isAdmin = currentUser && currentUser.role === "admin";
 
-  const emptyForm = { title:"", date:"", time:"07:00", km:"", elev:"", avg:"", desc:"", gpx:null, gpxUrl:"", img:null, meet:"", status:"upcoming" };
+  const emptyForm = { title:"", date:"", time:"07:00", km:"", elev:"", avg:"", desc:"", gpx:null, gpxData:null, gpxUrl:"", img:null, meet:"", status:"upcoming" };
   const [form, setForm] = useState(emptyForm);
   const sf = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -1154,7 +1154,7 @@ function RidesScreen({ data, setData, currentUser, toast }) {
         <TArea label="Opis trasy (FB)" value={form.desc} onChange={sf("desc")} placeholder="Opisz trase..." />
         <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:6 }}>
           <div>
-            <input ref={gpxRef} type="file" accept=".gpx" onChange={e => { const f = e.target.files[0]; if (f) setForm(x => ({ ...x, gpx:f.name })); }} style={{ display:"none" }} />
+            <input ref={gpxRef} type="file" accept=".gpx" onChange={e => { const f = e.target.files[0]; if (!f) return; const rr = new FileReader(); rr.onload = ev => setForm(x => ({ ...x, gpx:f.name, gpxData:ev.target.result })); rr.readAsDataURL(f); }} style={{ display:"none" }} />
             <Btn size="sm" v="ghost" sx={{ width:"100%" }} onClick={() => gpxRef.current.click()}><IMap /> GPX</Btn>
             {form.gpx && <div style={{ color:GRN, fontSize:11, marginTop:5, textAlign:"center" }}>✓ {form.gpx}</div>}
           </div>
@@ -1233,7 +1233,11 @@ function RidesScreen({ data, setData, currentUser, toast }) {
           {detail.gpxUrl && <GpxMap url={detail.gpxUrl} />}
           {detail.gpx && !detail.gpxUrl && (
             <div style={{ background:SURF2, borderRadius:11, padding:"11px 15px", display:"flex", alignItems:"center", gap:10, color:SUB, fontSize:12, marginBottom:14, border:"1px solid " + BDR }}>
-              <IMap /><span>GPX: {detail.gpx}</span>
+              <IMap />
+              <span style={{ flex:1 }}>GPX: {detail.gpx}</span>
+              {detail.gpxData
+                ? <a href={detail.gpxData} download={detail.gpx} style={{ color:RED, textDecoration:"none", fontFamily:FT, fontWeight:700, fontSize:10, letterSpacing:1, padding:"5px 11px", background:REDD, border:"1px solid " + REDB, borderRadius:7, whiteSpace:"nowrap" }}>⬇ POBIERZ</a>
+                : <span style={{ color:MUTED, fontSize:10 }}>brak pliku</span>}
             </div>
           )}
           {isAdmin && (
@@ -2461,8 +2465,8 @@ export default function App() {
         {/* PWA Install banner */}
         {showInstall && installPrompt && (
           <div style={{ position:"fixed", bottom:78, left:"50%", transform:"translateX(-50%)", width:"calc(100% - 24px)", maxWidth:456, zIndex:250, background:SURF, backgroundImage:CARD_GRAD_RED, border:"1px solid " + REDB, borderRadius:14, padding:"13px 14px", display:"flex", gap:11, alignItems:"center", boxShadow:"0 16px 48px rgba(0,0,0,0.7), 0 0 24px rgba(255,0,38,0.2)", animation:"fadeUp 0.4s " + SPR }}>
-            <div style={{ width:42, height:42, borderRadius:11, background:REDD, border:"1px solid " + REDB, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-              <WolfPaw size={22} />
+            <div style={{ flexShrink:0 }}>
+              <ClubLogo site={data.site} size={48} />
             </div>
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontFamily:FT, fontSize:12, fontWeight:700, letterSpacing:0.6, marginBottom:2, textTransform:"uppercase" }}>ZAINSTALUJ WATAHE</div>
