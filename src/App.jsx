@@ -4,7 +4,14 @@ import { createClient } from "@supabase/supabase-js";
 // ── SUPABASE ──────────────────────────────────────────────────
 const SB_URL = "https://draodfwnnevnulgwessi.supabase.co";
 const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRyYW9kZndubmV2bnVsZ3dlc3NpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNTYxNjYsImV4cCI6MjA5MzgzMjE2Nn0.M06KFgtI-BVbhXMfjJITYSpko9ocBTux626KL976KEU";
-const sb = createClient(SB_URL, SB_KEY);
+const sb = createClient(SB_URL, SB_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storage: typeof window !== "undefined" ? window.localStorage : undefined,
+  }
+});
 
 // ── STORAGE HELPERS ───────────────────────────────────────────
 async function uploadFile(bucket, path, file) {
@@ -2329,27 +2336,40 @@ export default function App() {
 
   // ── SUPABASE AUTH ─────────────────────────────────────────
   useEffect(() => {
-    // onAuthStateChange obsługuje też przywracanie sesji przy odświeżeniu (INITIAL_SESSION)
+    // 1) Listener — łapie zmiany sesji (login, logout, refresh)
     const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        authUidRef.current = session.user.id;
-        await loadProfile(session.user);
-      } else {
-        authUidRef.current = null;
-        setUser(null);
-      }
+      try {
+        if (session?.user) {
+          if (authUidRef.current === session.user.id) return; // już załadowane, pomiń
+          authUidRef.current = session.user.id;
+          await loadProfile(session.user);
+        } else {
+          authUidRef.current = null;
+          setUser(null);
+        }
+      } catch (e) { console.warn("Auth state change error:", e); }
     });
+
+    // 2) Backup — gdy INITIAL_SESSION wystrzelił przed rejestracją listenera
+    sb.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user && !authUidRef.current) {
+        authUidRef.current = session.user.id;
+        loadProfile(session.user).catch(e => console.warn("Initial loadProfile:", e));
+      }
+    }).catch(e => console.warn("getSession error:", e));
+
     return () => subscription.unsubscribe();
   }, []);
 
   async function loadProfile(authUser) {
-    const { data: p } = await sb.from("profiles").select("*").eq("id", authUser.id).single();
-    if (p) {
+    try {
+      const { data: p, error } = await sb.from("profiles").select("*").eq("id", authUser.id).maybeSingle();
+      if (error) { console.warn("loadProfile DB error:", error); return; }
+      if (!p) { console.warn("Brak profilu w bazie dla:", authUser.id); return; }
       const profile = { ...profileFromDB(p), email: authUser.email };
       setUser(profile);
-      // Zaktualizuj users w data
-      setData(d => ({ ...d, users: d.users.map(u => u.id === p.id ? profile : u).concat(d.users.find(u => u.id === p.id) ? [] : [profile]) }));
-    }
+      setData(d => ({ ...d, users: d.users.find(u => u.id === p.id) ? d.users.map(u => u.id === p.id ? profile : u) : [...d.users, profile] }));
+    } catch (e) { console.warn("loadProfile exception:", e); }
   }
 
   // ── ŁADOWANIE DANYCH Z SUPABASE ───────────────────────────
