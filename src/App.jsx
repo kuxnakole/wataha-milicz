@@ -2337,22 +2337,23 @@ export default function App() {
   // ── SUPABASE AUTH ─────────────────────────────────────────
   useEffect(() => {
     console.log("[AUTH] useEffect setup");
-    // 1) Listener — łapie zmiany sesji (login, logout, refresh)
-    const { data: { subscription } } = sb.auth.onAuthStateChange(async (event, session) => {
+    // KLUCZOWE: nie awaitować zapytań DB wewnątrz onAuthStateChange — deadlock w Supabase
+    // Zamiast tego defer'ować przez setTimeout(0) — to znany pattern z dokumentacji Supabase
+    const { data: { subscription } } = sb.auth.onAuthStateChange((event, session) => {
       console.log("[AUTH] onAuthStateChange:", event, "session:", session?.user?.id || "none");
-      try {
-        if (session?.user) {
-          if (authUidRef.current === session.user.id) { console.log("[AUTH] same user, skip"); return; }
-          authUidRef.current = session.user.id;
-          await loadProfile(session.user);
-        } else {
-          authUidRef.current = null;
-          setUser(null);
-        }
-      } catch (e) { console.warn("[AUTH] Auth state change error:", e); }
+      if (session?.user) {
+        if (authUidRef.current === session.user.id) { console.log("[AUTH] same user, skip"); return; }
+        authUidRef.current = session.user.id;
+        setTimeout(() => {
+          loadProfile(session.user).catch(e => console.warn("[AUTH] loadProfile error:", e));
+        }, 0);
+      } else {
+        authUidRef.current = null;
+        setUser(null);
+      }
     });
 
-    // 2) Backup — gdy INITIAL_SESSION wystrzelił przed rejestracją listenera
+    // Backup — gdy INITIAL_SESSION wystrzelił przed rejestracją
     sb.auth.getSession().then(({ data: { session } }) => {
       console.log("[AUTH] getSession:", session?.user?.id || "none");
       if (session?.user && !authUidRef.current) {
