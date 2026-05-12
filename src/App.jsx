@@ -242,6 +242,17 @@ const INIT_NOTIFS = [
   { id:"n3", type:"news", title:"Nowy zawodnik!",         body:"Tomek W. dołączył do Watahy. Witamy!",          time:"3 dni temu",   read:true  },
 ];
 
+// ── LOKALNY STAN ODCZYTANYCH POWIADOMIEŃ (localStorage) ─────────
+function getLocalReadNotifs() {
+  try { return new Set(JSON.parse(localStorage.getItem("wm_read_notifs") || "[]")); } catch { return new Set(); }
+}
+function saveLocalReadNotif(id) {
+  try { const r = getLocalReadNotifs(); r.add(id); localStorage.setItem("wm_read_notifs", JSON.stringify([...r])); } catch {}
+}
+function saveAllLocalReadNotifs(ids) {
+  try { localStorage.setItem("wm_read_notifs", JSON.stringify(ids)); } catch {}
+}
+
 // ── DB ↔ APP TRANSFORMACJE ────────────────────────────────────
 function rideFromDB(r) {
   return { id:r.id, rideNum:r.ride_num||0, title:r.title, date:r.date, time:r.time, km:+r.km||0, elev:+r.elev||0, avg:r.avg||"", desc:r.description||"", gpx:r.gpx||null, gpxText:r.gpx_text||null, gpxUrl:r.gpx_url||"", img:r.img||WOLF_BG, status:r.status, sent:r.sent||false, meet:r.meet||"" };
@@ -262,7 +273,9 @@ function profileFromDB(p) {
   return { id:p.id, email:"", name:p.name||"", role:p.role||"user", inTeam:p.in_team||false, birthYear:p.birth_year||"", avatar:p.avatar_url||null, nr:p.nr!==false, nra:p.nra||false, nn:p.nn!==false };
 }
 function notifFromDB(n, uid) {
-  return { id:n.id, type:n.type||"news", title:n.title, body:n.body||"", time:n.time_label||"teraz", read:Array.isArray(n.read_by)&&uid?n.read_by.includes(uid):false, read_by:Array.isArray(n.read_by)?n.read_by:[] };
+  const localRead = getLocalReadNotifs().has(n.id);
+  const dbRead = Array.isArray(n.read_by) && uid ? n.read_by.includes(uid) : false;
+  return { id:n.id, type:n.type||"news", title:n.title, body:n.body||"", time:n.time_label||"teraz", read:localRead||dbRead, read_by:Array.isArray(n.read_by)?n.read_by:[] };
 }
 function userMedals(uid, races) {
   let g = 0, s = 0, b = 0;
@@ -733,8 +746,8 @@ function AuthScreen({ users, onLogin, onRegister, onGuest, site: authSite }) {
       <div style={{ position:"absolute", top:"-10%", left:"50%", transform:"translateX(-50%)", width:600, height:600, background:"radial-gradient(circle, rgba(255,0,38,0.10) 0%, transparent 60%)", pointerEvents:"none" }} />
 
       <div style={{ textAlign:"center", marginBottom:34, position:"relative", animation:"fadeUp 0.5s " + SPR }}>
-        <div style={{ width:100, height:100, borderRadius:"50%", border:"2px solid " + RED, background:REDD, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", boxShadow:"0 0 40px " + REDG }}>
-          <ClubLogo site={authSite || INIT_SITE} size={78} />
+        <div style={{ width:110, height:110, borderRadius:"50%", border:"2px solid " + RED, background:REDD, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", boxShadow:"0 0 40px " + REDG, overflow:"hidden" }}>
+          <ClubLogo site={authSite || INIT_SITE} size={96} />
         </div>
         <h1 style={{ fontFamily:FT, fontSize:26, fontWeight:700, letterSpacing:3.5, margin:"0 0 5px", color:TEXT }}>WATAHA MILICZ</h1>
         <p style={{ color:SUB, fontSize:11, margin:0, letterSpacing:2.4, fontFamily:FT, textTransform:"uppercase" }}>MILICZ BIKE COLLECTIVE</p>
@@ -2081,20 +2094,29 @@ function NotifsScreen({ data, setData, currentUser }) {
   const unread = (data.notifs || []).filter(n => !n.read).length;
   const markAll = async () => {
     setData(d => ({ ...d, notifs: d.notifs.map(n => ({ ...n, read:true })) }));
+    saveAllLocalReadNotifs(data.notifs.map(n => n.id)); // zapisz wszystkie lokalnie
     const uid = currentUser?.id;
     if (!uid) return;
-    await Promise.all(data.notifs.filter(n=>!n.read).map(n =>
-      sb.from("notifications").update({ read_by: [...(Array.isArray(n.read_by)?n.read_by:[]), uid] }).eq("id", n.id)
-    ));
+    // Sync z bazą
+    data.notifs.filter(n=>!n.read).forEach(n => {
+      const existingReads = Array.isArray(n.read_by) ? n.read_by : [];
+      if (!existingReads.includes(uid)) {
+        sb.from("notifications").update({ read_by: [...existingReads, uid] }).eq("id", n.id)
+          .then(({error}) => { if(error) console.warn("markAll DB error:", error); });
+      }
+    });
   };
   const markOne = async (id) => {
     setData(d => ({ ...d, notifs: d.notifs.map(n => n.id === id ? { ...n, read:true } : n) }));
+    saveLocalReadNotif(id); // zapisz lokalnie — działa zawsze
     const uid = currentUser?.id;
     if (!uid) return;
+    // Zapisz też do bazy (sync między urządzeniami)
     const notif = data.notifs.find(n => n.id === id);
     const existingReads = Array.isArray(notif?.read_by) ? notif.read_by : [];
     if (!existingReads.includes(uid)) {
-      await sb.from("notifications").update({ read_by: [...existingReads, uid] }).eq("id", id);
+      sb.from("notifications").update({ read_by: [...existingReads, uid] }).eq("id", id)
+        .then(({error}) => { if(error) console.warn("markOne DB error:", error); });
     }
   };
   const TI = { ride:"☕", race:"🏁", news:"🐺" };
