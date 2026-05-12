@@ -733,8 +733,8 @@ function AuthScreen({ users, onLogin, onRegister, onGuest, site: authSite }) {
       <div style={{ position:"absolute", top:"-10%", left:"50%", transform:"translateX(-50%)", width:600, height:600, background:"radial-gradient(circle, rgba(255,0,38,0.10) 0%, transparent 60%)", pointerEvents:"none" }} />
 
       <div style={{ textAlign:"center", marginBottom:34, position:"relative", animation:"fadeUp 0.5s " + SPR }}>
-        <div style={{ width:80, height:80, borderRadius:"50%", border:"2px solid " + RED, background:REDD, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px", boxShadow:"0 0 32px " + REDG }}>
-          <ClubLogo site={authSite || INIT_SITE} size={42} />
+        <div style={{ width:100, height:100, borderRadius:"50%", border:"2px solid " + RED, background:REDD, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 16px", boxShadow:"0 0 40px " + REDG }}>
+          <ClubLogo site={authSite || INIT_SITE} size={78} />
         </div>
         <h1 style={{ fontFamily:FT, fontSize:26, fontWeight:700, letterSpacing:3.5, margin:"0 0 5px", color:TEXT }}>WATAHA MILICZ</h1>
         <p style={{ color:SUB, fontSize:11, margin:0, letterSpacing:2.4, fontFamily:FT, textTransform:"uppercase" }}>MILICZ BIKE COLLECTIVE</p>
@@ -1393,9 +1393,10 @@ function RacesScreen({ data, setData, currentUser, toast }) {
   const done     = racesWithStatus.filter(r => r.effectiveStatus === "done").sort((a,b) => b.date.localeCompare(a.date));
 
   function RaceCard({ r }) {
+    const es = r.effectiveStatus || r.status;
     return (
-      <Card accent={r.status === "upcoming"} sx={{ marginBottom:13 }}>
-        {r.status === "upcoming" && (
+      <Card accent={es === "upcoming"} sx={{ marginBottom:13 }}>
+        {es === "upcoming" && (
           <div style={{ height:96, background:HERO_GRAD, display:"flex", alignItems:"center", justifyContent:"center", gap:14, position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at center, rgba(255,0,38,0.18) 0%, transparent 70%)" }} />
             {r.logo
@@ -2454,8 +2455,7 @@ export default function App() {
     const onBeforeInstall = e => {
       e.preventDefault();
       setInstallPrompt(e);
-      const dismissed = (typeof window !== "undefined") && window.localStorage && window.localStorage.getItem("wataha_install_dismissed");
-      if (!dismissed) setShowInstall(true);
+      setShowInstall(true); // zawsze pokazuj popup
     };
     const onInstalled = () => { setInstallPrompt(null); setShowInstall(false); };
     window.addEventListener("beforeinstallprompt", onBeforeInstall);
@@ -2476,7 +2476,6 @@ export default function App() {
 
   function dismissInstall() {
     setShowInstall(false);
-    try { window.localStorage.setItem("wataha_install_dismissed", "1"); } catch(_) {}
   }
 
   // Request notification permission shortly after login
