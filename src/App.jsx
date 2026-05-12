@@ -1379,6 +1379,20 @@ function RacesScreen({ data, setData, currentUser, toast }) {
     setResForm(emptyRes);
   }
 
+  async function delRace(id) {
+    setData(d => ({ ...d, races: d.races.filter(r => r.id !== id) }));
+    await sb.from("race_results").delete().eq("race_id", id);
+    await sb.from("races").delete().eq("id", id);
+    toast("Start usunięty");
+  }
+
+  async function toggleRaceStatus(r) {
+    const newStatus = (r.effectiveStatus || r.status) === "upcoming" ? "done" : "upcoming";
+    setData(d => ({ ...d, races: d.races.map(x => x.id === r.id ? { ...x, status: newStatus } : x) }));
+    await sb.from("races").update({ status: newStatus }).eq("id", r.id);
+    toast(newStatus === "done" ? "Przeniesiono do zakończonych" : "Przeniesiono do nadchodzących");
+  }
+
   async function delResult(raceId, idx) {
     const existing = data.races.find(r => r.id === raceId)?.results[idx];
     setData(d => ({ ...d, races: d.races.map(r => r.id === raceId ? { ...r, results: r.results.filter((_, i) => i !== idx) } : r) }));
@@ -1420,12 +1434,22 @@ function RacesScreen({ data, setData, currentUser, toast }) {
               {r.sub && <div style={{ color:SUB, fontSize:12, marginTop:1 }}>{r.sub}</div>}
             </div>
             <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0, marginLeft:8 }}>
-              {r.status === "upcoming" && <Pill label="Nadchodzi" />}
+              {es === "upcoming" && <Pill label="Nadchodzi" />}
               {isAdmin && (
-                <button onClick={() => { setForm({ ...r, dists: r.dists || [{ lbl:"", km:"" }] }); setEditRace(r); setShowForm(true); }}
-                  style={{ background:SURF2, border:"1px solid " + BDR, color:SUB, borderRadius:7, padding:"5px 8px", cursor:"pointer", display:"flex" }}>
-                  <IEdit />
-                </button>
+                <div style={{ display:"flex", gap:5 }}>
+                  <button onClick={() => toggleRaceStatus(r)} title={es === "upcoming" ? "Zakończ" : "Przywróć"}
+                    style={{ background:es==="upcoming"?REDD:SURF2, border:"1px solid "+(es==="upcoming"?REDB:BDR), color:es==="upcoming"?RED:SUB, borderRadius:7, padding:"5px 8px", cursor:"pointer", fontSize:10, fontFamily:FT, fontWeight:700, letterSpacing:0.5 }}>
+                    {es === "upcoming" ? "✓ ZAKOŃCZ" : "↩ WRÓĆ"}
+                  </button>
+                  <button onClick={() => { setForm({ ...r, dists: r.dists || [{ lbl:"", km:"" }] }); setEditRace(r); setShowForm(true); }}
+                    style={{ background:SURF2, border:"1px solid " + BDR, color:SUB, borderRadius:7, padding:"5px 8px", cursor:"pointer", display:"flex" }}>
+                    <IEdit />
+                  </button>
+                  <button onClick={() => { if(window.confirm("Usunąć ten start?")) delRace(r.id); }}
+                    style={{ background:REDD, border:"1px solid " + REDB, color:RED, borderRadius:7, padding:"5px 8px", cursor:"pointer", display:"flex" }}>
+                    <ITrash />
+                  </button>
+                </div>
               )}
             </div>
           </div>
@@ -2053,11 +2077,11 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
 // ═══════════════════════════════════════════════════════════════
 // NOTIFICATIONS SCREEN
 // ═══════════════════════════════════════════════════════════════
-function NotifsScreen({ data, setData }) {
+function NotifsScreen({ data, setData, currentUser }) {
   const unread = (data.notifs || []).filter(n => !n.read).length;
   const markAll = async () => {
     setData(d => ({ ...d, notifs: d.notifs.map(n => ({ ...n, read:true })) }));
-    const uid = data.users.find(u => u.id === currentUser?.id)?.id || "";
+    const uid = currentUser?.id;
     if (!uid) return;
     await Promise.all(data.notifs.filter(n=>!n.read).map(n =>
       sb.from("notifications").update({ read_by: [...(Array.isArray(n.read_by)?n.read_by:[]), uid] }).eq("id", n.id)
@@ -2430,7 +2454,7 @@ export default function App() {
         rides:    (ridesRes.data   || []).map(rideFromDB),
         races:    (racesRes.data   || []).map(raceFromDB),
         sponsors: sponsorsRes.data || [],
-        notifs:   notifsData.length > 0 ? notifsData : d.notifs,
+        notifs:   (notifsData.length > 0 && authUidRef.current) ? notifsData : d.notifs,
         users:    (profilesRes.data || []).map(profileFromDB),
       }));
     } catch(e) {
