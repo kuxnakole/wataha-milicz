@@ -2377,6 +2377,7 @@ export default function App() {
   const [installPrompt, setInstallPrompt] = useState(null);
   const [showInstall,   setShowInstall]   = useState(false);
   const [winW, setWinW] = useState(typeof window !== "undefined" ? window.innerWidth : 375);
+  const [dataReady, setDataReady] = useState(false);
   const isDesktop = winW >= 768;
   const authUidRef = useRef(null);
 
@@ -2436,7 +2437,7 @@ export default function App() {
   // ── ŁADOWANIE DANYCH Z SUPABASE ───────────────────────────
   const [data, setData] = useState({
     site: INIT_SITE, users: [], rides: getInitRides(),
-    races: INIT_RACES, sponsors: INIT_SPONSORS, notifs: INIT_NOTIFS,
+    races: INIT_RACES, sponsors: INIT_SPONSORS, notifs: [],
   });
 
   useEffect(() => {
@@ -2481,6 +2482,8 @@ export default function App() {
       }));
     } catch(e) {
       console.warn("loadAllData error:", e);
+    } finally {
+      setDataReady(true);
     }
   }
 
@@ -2534,7 +2537,8 @@ export default function App() {
   }, [user]);
 
   // Trigger local notification when a new notif appears (only for logged-in users)
-  const lastNotifId = useRef(data.notifs[0] && data.notifs[0].id);
+  const lastNotifId = useRef(null);
+  const initialLoadDoneRef = useRef(false);
   useEffect(() => {
     if (!user) return;
     const newest = data.notifs[0];
@@ -2608,6 +2612,18 @@ export default function App() {
   return (
     <>
       <style>{GCSS}</style>
+
+      {/* ═══ LOADING OVERLAY — ukrywa dane startowe przed załadowaniem z DB ═══ */}
+      {!dataReady && (
+        <div style={{ position:"fixed", inset:0, background:BG, zIndex:9999, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:20 }}>
+          <ClubLogo site={data.site} size={80} />
+          <div style={{ display:"flex", gap:7 }}>
+            <div style={{ width:9, height:9, borderRadius:"50%", background:RED, animation:"dot1 1.2s ease-in-out infinite", boxShadow:"0 0 10px " + REDG }} />
+            <div style={{ width:9, height:9, borderRadius:"50%", background:RED, animation:"dot2 1.2s ease-in-out 0.2s infinite", boxShadow:"0 0 10px " + REDG }} />
+            <div style={{ width:9, height:9, borderRadius:"50%", background:RED, animation:"dot3 1.2s ease-in-out 0.4s infinite", boxShadow:"0 0 10px " + REDG }} />
+          </div>
+        </div>
+      )}
 
       {/* ═══ DESKTOP LAYOUT (≥768px) ═══ */}
       {isDesktop ? (
