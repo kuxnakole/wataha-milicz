@@ -2562,13 +2562,33 @@ export default function App() {
   }, [user]);
 
   // Trigger local notification when a new notif appears (only for logged-in users)
-  const lastNotifId = useRef(null);
-  const initialLoadDoneRef = useRef(false);
+  const lastNotifId = useRef(
+    typeof window !== "undefined" ? (localStorage.getItem("wm_last_notif_id") || null) : null
+  );
+  // jeśli localStorage ma zapisany ID → aplikacja była już uruchomiona → pomiń "pierwsze ładowanie"
+  const initialLoadDoneRef = useRef(
+    typeof window !== "undefined" && !!localStorage.getItem("wm_last_notif_id")
+  );
   useEffect(() => {
     if (!user) return;
     const newest = data.notifs[0];
-    if (!newest || newest.id === lastNotifId.current) return;
+    if (!newest) return;
+
+    // Pierwsze uruchomienie — zapamiętaj ID ale nie pokazuj
+    if (!initialLoadDoneRef.current) {
+      lastNotifId.current = newest.id;
+      try { localStorage.setItem("wm_last_notif_id", newest.id); } catch(_) {}
+      initialLoadDoneRef.current = true;
+      return;
+    }
+
+    if (newest.id === lastNotifId.current) return; // to samo powiadomienie
+    if (newest.read || getLocalReadNotifs().has(newest.id)) return; // już przeczytane
+
+    // Nowe, nieprzeczytane powiadomienie!
     lastNotifId.current = newest.id;
+    try { localStorage.setItem("wm_last_notif_id", newest.id); } catch(_) {}
+
     if (typeof window === "undefined" || !("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     try {
@@ -2643,8 +2663,10 @@ export default function App() {
         <div style={{ position:"fixed", inset:0, background:"#08080A", zIndex:9999, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:0 }}>
           {/* Red glow behind logo */}
           <div style={{ position:"absolute", width:380, height:380, borderRadius:"50%", background:"radial-gradient(circle, rgba(255,0,38,0.22) 0%, rgba(255,0,38,0.06) 45%, transparent 70%)", pointerEvents:"none" }} />
-          {/* Logo */}
-          <img src={LOGO_SRC} alt="logo" style={{ width:180, height:180, objectFit:"contain", position:"relative", zIndex:1, marginBottom:28 }} />
+          {/* Logo w kole — ClubLogo obcina białe tło JPEG */}
+          <div style={{ position:"relative", zIndex:1, marginBottom:28 }}>
+            <ClubLogo site={INIT_SITE} size={180} />
+          </div>
           {/* Name */}
           <h1 style={{ fontFamily:FT, fontSize:30, fontWeight:700, letterSpacing:4.5, color:"#F5F5F7", margin:"0 0 8px", textTransform:"uppercase", position:"relative", zIndex:1 }}>WATAHA MILICZ</h1>
           <p style={{ fontFamily:FT, fontSize:11, color:RED, letterSpacing:3.2, margin:"0 0 36px", textTransform:"uppercase", fontWeight:600, position:"relative", zIndex:1 }}>MILICZ BIKE COLLECTIVE</p>
