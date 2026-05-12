@@ -2720,8 +2720,10 @@ export default function App() {
                       <Btn size="sm" v="ghost" sx={{ width:"100%", marginTop:6 }} onClick={() => { setMenuOpen(false); if(installPrompt){ installPrompt.prompt(); } else { toast("Kliknij ikonę ⊕ lub ⬇ w pasku adresu przeglądarki"); } }}>📲 ZAINSTALUJ APLIKACJĘ</Btn>
                     </>
                   ) : (
-                    <Btn size="sm" sx={{ width:"100%" }} onClick={() => { setMenuOpen(false); setShowAuth(true); }}>ZALOGUJ SIĘ</Btn>
-              <Btn size="sm" v="ghost" sx={{ width:"100%", marginTop:6 }} onClick={() => { setMenuOpen(false); if(installPrompt){ installPrompt.prompt(); } else { toast("Kliknij ikonę ⊕ lub ⬇ w pasku adresu przeglądarki"); } }}>📲 ZAINSTALUJ APLIKACJĘ</Btn>
+                    <>
+                      <Btn size="sm" sx={{ width:"100%" }} onClick={() => { setMenuOpen(false); setShowAuth(true); }}>ZALOGUJ SIĘ</Btn>
+                      <Btn size="sm" v="ghost" sx={{ width:"100%", marginTop:6 }} onClick={() => { setMenuOpen(false); if(installPrompt){ installPrompt.prompt(); } else { toast("Kliknij ikonę ⊕ lub ⬇ w pasku adresu przeglądarki"); } }}>📲 ZAINSTALUJ APLIKACJĘ</Btn>
+                    </>
                   )}
                 </div>
               </div>
