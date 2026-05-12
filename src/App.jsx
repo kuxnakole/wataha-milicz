@@ -194,6 +194,7 @@ const INIT_SITE = {
   logoType:"real",
   logoImage:null,
   heroImage:null,
+  aboutImage:null,
   facebook:"",
   instagram:"",
   strava:"",
@@ -837,14 +838,14 @@ function HomeScreen({ data }) {
 
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:18 }}>
         {[
-          { e:"☕", v:doneRides,             l:"COFFEE RIDES",  c:RED  },
-          { e:"🗺", v:totalKm + " km",       l:"KILOMETRY",     c:"#3B82F6" },
-          { e:"🐺", v:team.length,           l:"ZAWODNICY",     c:GRN  },
-          { e:"🏆", v:totalMedals,           l:"MEDALE",        c:GOLD },
+          { Icon:ICoffee, v:doneRides,             l:"COFFEE RIDES",  c:RED  },
+          { Icon:() => <Ico><path d="M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></Ico>, v:totalKm + " km",       l:"KILOMETRY",     c:"#3B82F6" },
+          { Icon:IUsers,  v:team.length,           l:"ZAWODNICY",     c:GRN  },
+          { Icon:ITrophy, v:totalMedals,           l:"MEDALE",        c:GOLD },
         ].map(s => (
           <Card key={s.l} sx={{ padding:"18px 16px", position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", top:-20, right:-20, width:80, height:80, background:"radial-gradient(circle, " + s.c + "22 0%, transparent 70%)", pointerEvents:"none" }} />
-            <div style={{ fontSize:22, marginBottom:8, position:"relative" }}>{s.e}</div>
+            <div style={{ color:s.c, opacity:0.75, marginBottom:8, position:"relative", display:"flex" }}><s.Icon /></div>
             <div style={{ fontFamily:FT, fontSize:28, fontWeight:700, color:s.c, lineHeight:1, position:"relative", letterSpacing:0.5 }}>
               <CountUp value={s.v} />
             </div>
@@ -1912,15 +1913,23 @@ function AboutScreen({ data }) {
         <p style={{ color:SUB, fontSize:14, lineHeight:1.75, margin:0 }}>{site.motto}</p>
       </Card>
 
+      {/* Zdjęcie na stronie O nas — osobne od hero na stronie głównej */}
+      {site.aboutImage && (
+        <div style={{ borderRadius:16, overflow:"hidden", marginBottom:18, maxHeight:220, position:"relative" }}>
+          <img src={site.aboutImage} alt="Wataha Milicz" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", maxHeight:220 }} />
+          <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, transparent 40%, rgba(8,8,10,0.6) 100%)" }} />
+        </div>
+      )}
+
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:18 }}>
         {[
-          { v: team.length + "+",    l:"CZŁONKÓW",    ic:"👥" },
-          { v: rides.filter(r => r.status === "done").length + "+", l:"COFFEE RIDE", ic:"☕" },
-          { v: totalMedals + "+",    l:"MEDALI",      ic:"🏆" },
-          { v: site.founded,         l:"ROK ZAŁOŻENIA",ic:"📅" },
+          { v: team.length + "+",    l:"CZŁONKÓW",    Icon: IUsers   },
+          { v: rides.filter(r => r.status === "done").length + "+", l:"COFFEE RIDE", Icon: ICoffee },
+          { v: totalMedals + "+",    l:"MEDALI",      Icon: ITrophy  },
+          { v: site.founded,         l:"ROK ZAŁOŻENIA", Icon: () => <Ico><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Ico> },
         ].map(s => (
           <Card key={s.l} sx={{ padding:"18px 16px", display:"flex", alignItems:"center", gap:13 }}>
-            <span style={{ fontSize:28 }}>{s.ic}</span>
+            <div style={{ color:MUTED, opacity:0.7, flexShrink:0, display:"flex" }}><s.Icon /></div>
             <div>
               <div style={{ fontFamily:FT, fontSize:23, fontWeight:700, color:RED, lineHeight:1, letterSpacing:0.5 }}>
                 <CountUp value={s.v} />
@@ -2182,6 +2191,7 @@ function AdminScreen({ data, setData, toast }) {
   const [nlForm, setNlForm] = useState({ title:"", body:"", type:"news" });
   const logoRef = useRef();
   const heroRef = useRef();
+  const aboutImgRef = useRef();
   const ssf = k => e => setSite(s => ({ ...s, [k]: e.target.value }));
 
   async function saveSite() {
@@ -2259,6 +2269,15 @@ function AdminScreen({ data, setData, toast }) {
               {site.heroImage && <Btn size="sm" v="danger" onClick={() => setSite(s => ({ ...s, heroImage:null }))}>Usuń tło</Btn>}
             </div>
             {site.heroImage && <img src={site.heroImage} alt="" style={{ width:"100%", borderRadius:11, maxHeight:100, objectFit:"cover" }} />}
+
+            {/* Zdjęcie O nas — osobne */}
+            <input ref={aboutImgRef} type="file" accept="image/*" onChange={e => onImgLoad("aboutImage", e)} style={{ display:"none" }} />
+            <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:1.6, margin:"14px 0 8px", textTransform:"uppercase" }}>Zdjęcie — strona O nas</div>
+            <div style={{ display:"flex", gap:9, alignItems:"center", marginBottom:9 }}>
+              <Btn size="sm" v="ghost" onClick={() => aboutImgRef.current.click()}><IPhoto /> Wgraj zdjęcie</Btn>
+              {site.aboutImage && <Btn size="sm" v="danger" onClick={() => setSite(s => ({ ...s, aboutImage:null }))}>Usuń</Btn>}
+            </div>
+            {site.aboutImage && <img src={site.aboutImage} alt="" style={{ width:"100%", borderRadius:11, maxHeight:100, objectFit:"cover" }} />}
           </Card>
           <Btn full onClick={saveSite}>ZAPISZ USTAWIENIA</Btn>
         </div>
