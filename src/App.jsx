@@ -2120,6 +2120,9 @@ function NotifsScreen({ data, setData, currentUser }) {
     }
   };
   const TI = { ride:"☕", race:"🏁", news:"🐺" };
+  const unreadNotifs = (data.notifs || []).filter(n => !n.read);
+  const readNotifs   = (data.notifs || []).filter(n =>  n.read);
+  const [showHistory, setShowHistory] = useState(false);
 
   return (
     <div className="fade-stagger">
@@ -2127,7 +2130,12 @@ function NotifsScreen({ data, setData, currentUser }) {
         sub={unread > 0 ? unread + " nieprzeczytanych" : "Wszystko przeczytane"}
         action={unread > 0 && <Btn size="sm" v="ghost" onClick={markAll}>Przeczytaj wszystkie</Btn>}
       />
-      {(data.notifs || []).map(n => (
+      {unreadNotifs.length === 0 && (
+        <div style={{ textAlign:"center", padding:"32px 0", color:MUTED, fontFamily:FT, fontSize:11, letterSpacing:1.2 }}>
+          Brak nowych powiadomień ✓
+        </div>
+      )}
+      {unreadNotifs.map(n => (
         <div key={n.id} onClick={() => markOne(n.id)} className="no-tap"
           style={{ background: n.read ? SURF : SURF, backgroundImage: n.read ? CARD_GRAD : CARD_GRAD_RED, border:"1px solid " + (n.read ? BDR : REDB), borderRadius:13, padding:"14px 16px", display:"flex", gap:13, alignItems:"flex-start", cursor:"pointer", marginBottom:9, boxShadow:"0 1px 0 rgba(255,255,255,0.04) inset, 0 6px 20px rgba(0,0,0,0.35)", transition: "transform 0.2s " + SPR }}>
           <div style={{ width:42, height:42, borderRadius:11, background: n.read ? SURF2 : REDD, display:"flex", alignItems:"center", justifyContent:"center", fontSize:19, flexShrink:0, border:"1px solid " + (n.read ? BDR : REDB) }}>
@@ -2143,7 +2151,24 @@ function NotifsScreen({ data, setData, currentUser }) {
           </div>
         </div>
       ))}
-      {(data.notifs || []).length === 0 && <div style={{ color:MUTED, textAlign:"center", padding:"44px 0", fontSize:14 }}>Brak powiadomień</div>}
+      {readNotifs.length > 0 && (
+        <div style={{ marginTop:12 }}>
+          <button onClick={() => setShowHistory(h => !h)} className="no-tap"
+            style={{ background:"none", border:"none", color:MUTED, fontSize:11, fontFamily:FT, letterSpacing:0.8, cursor:"pointer", padding:"6px 0", display:"flex", alignItems:"center", gap:7 }}>
+            {showHistory ? "▲" : "▼"} Historia ({readNotifs.length} przeczytanych)
+          </button>
+          {showHistory && readNotifs.map(n => (
+            <div key={n.id} style={{ background:SURF, backgroundImage:CARD_GRAD, border:"1px solid " + BDR, borderRadius:13, padding:"12px 14px", display:"flex", gap:11, alignItems:"flex-start", marginBottom:7, opacity:0.55 }}>
+              <span style={{ fontSize:18, flexShrink:0 }}>{TI[n.type] || "🐺"}</span>
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ fontSize:12, fontWeight:700, color:SUB }}>{n.title}</div>
+                {n.body && <div style={{ fontSize:11, color:MUTED, marginTop:3, lineHeight:1.5 }}>{n.body}</div>}
+                <div style={{ fontSize:10, color:MUTED, marginTop:5, fontFamily:FT, letterSpacing:0.4 }}>{n.time}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -2613,11 +2638,18 @@ export default function App() {
     <>
       <style>{GCSS}</style>
 
-      {/* ═══ LOADING OVERLAY — ukrywa dane startowe przed załadowaniem z DB ═══ */}
+      {/* ═══ LOADING SCREEN ═══ */}
       {!dataReady && (
-        <div style={{ position:"fixed", inset:0, background:BG, zIndex:9999, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:20 }}>
-          <ClubLogo site={data.site} size={80} />
-          <div style={{ display:"flex", gap:7 }}>
+        <div style={{ position:"fixed", inset:0, background:"#08080A", zIndex:9999, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:0 }}>
+          {/* Red glow behind logo */}
+          <div style={{ position:"absolute", width:380, height:380, borderRadius:"50%", background:"radial-gradient(circle, rgba(255,0,38,0.22) 0%, rgba(255,0,38,0.06) 45%, transparent 70%)", pointerEvents:"none" }} />
+          {/* Logo */}
+          <img src={LOGO_SRC} alt="logo" style={{ width:180, height:180, objectFit:"contain", position:"relative", zIndex:1, marginBottom:28 }} />
+          {/* Name */}
+          <h1 style={{ fontFamily:FT, fontSize:30, fontWeight:700, letterSpacing:4.5, color:"#F5F5F7", margin:"0 0 8px", textTransform:"uppercase", position:"relative", zIndex:1 }}>WATAHA MILICZ</h1>
+          <p style={{ fontFamily:FT, fontSize:11, color:RED, letterSpacing:3.2, margin:"0 0 36px", textTransform:"uppercase", fontWeight:600, position:"relative", zIndex:1 }}>MILICZ BIKE COLLECTIVE</p>
+          {/* Dots */}
+          <div style={{ display:"flex", gap:8, position:"relative", zIndex:1 }}>
             <div style={{ width:9, height:9, borderRadius:"50%", background:RED, animation:"dot1 1.2s ease-in-out infinite", boxShadow:"0 0 10px " + REDG }} />
             <div style={{ width:9, height:9, borderRadius:"50%", background:RED, animation:"dot2 1.2s ease-in-out 0.2s infinite", boxShadow:"0 0 10px " + REDG }} />
             <div style={{ width:9, height:9, borderRadius:"50%", background:RED, animation:"dot3 1.2s ease-in-out 0.4s infinite", boxShadow:"0 0 10px " + REDG }} />
