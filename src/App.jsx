@@ -676,7 +676,7 @@ function LoadingScreen() {
 // ═══════════════════════════════════════════════════════════════
 // AUTH SCREEN
 // ═══════════════════════════════════════════════════════════════
-function AuthScreen({ users, onLogin, onRegister, onGuest }) {
+function AuthScreen({ users, onLogin, onRegister, onGuest, site: authSite }) {
   const [mode, setMode]   = useState("login");
   const [form, setForm]   = useState({ name:"", email:"", pass:"", pass2:"", year:"" });
   const [errs, setErrs]   = useState({});
@@ -734,7 +734,7 @@ function AuthScreen({ users, onLogin, onRegister, onGuest }) {
 
       <div style={{ textAlign:"center", marginBottom:34, position:"relative", animation:"fadeUp 0.5s " + SPR }}>
         <div style={{ width:80, height:80, borderRadius:"50%", border:"2px solid " + RED, background:REDD, display:"flex", alignItems:"center", justifyContent:"center", margin:"0 auto 14px", boxShadow:"0 0 32px " + REDG }}>
-          <WolfPaw size={42} />
+          <ClubLogo site={authSite || INIT_SITE} size={42} />
         </div>
         <h1 style={{ fontFamily:FT, fontSize:26, fontWeight:700, letterSpacing:3.5, margin:"0 0 5px", color:TEXT }}>WATAHA MILICZ</h1>
         <p style={{ color:SUB, fontSize:11, margin:0, letterSpacing:2.4, fontFamily:FT, textTransform:"uppercase" }}>MILICZ BIKE COLLECTIVE</p>
@@ -800,7 +800,7 @@ function HomeScreen({ data }) {
   return (
     <div className="fade-stagger">
       <div style={{ position:"relative", borderRadius:20, overflow:"hidden", marginBottom:18, minHeight:230, display:"flex", flexDirection:"column", justifyContent:"flex-end", background: site.heroImage ? "none" : HERO_GRAD, border:"1px solid " + REDB, boxShadow:"0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,0,38,0.10)" }}>
-        {site.heroImage && <img src={site.heroImage} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity:0.45 }} />}
+        {site.heroImage && <img src={site.heroImage} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity:0.72 }} />}
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top,rgba(8,8,10,0.97) 22%,rgba(8,8,10,0.20) 100%)" }} />
         {!site.heroImage && (
           <>
@@ -959,11 +959,11 @@ function GpxMap({ url, gpxText: gpxTextProp, fileName }) {
 
       map = L.map(containerRef.current, { zoomControl:true, scrollWheelZoom:false, attributionControl:false });
 
-      L.tileLayer("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", {
+      L.tileLayer("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", {
         maxZoom:19, subdomains:"abcd",
       }).addTo(map);
 
-      const line = L.polyline(pts, { color:"#FF0026", weight:4, opacity:0.95, lineCap:"round", lineJoin:"round" }).addTo(map);
+      const line = L.polyline(pts, { color:"#D0000E", weight:5, opacity:1, lineCap:"round", lineJoin:"round" }).addTo(map);
 
       const startIcon = L.divIcon({ html:'<div style="width:14px;height:14px;border-radius:50%;background:#34C759;border:2px solid #fff;box-shadow:0 0 10px rgba(52,199,89,0.8);"></div>', className:"", iconSize:[14,14], iconAnchor:[7,7] });
       const endIcon   = L.divIcon({ html:'<div style="width:14px;height:14px;border-radius:50%;background:#FF0026;border:2px solid #fff;box-shadow:0 0 12px rgba(255,0,38,0.9);"></div>', className:"", iconSize:[14,14], iconAnchor:[7,7] });
@@ -1029,7 +1029,7 @@ function GpxMap({ url, gpxText: gpxTextProp, fileName }) {
           )}
         </div>
       </div>
-      <div ref={containerRef} style={{ height:260, background:BG2, position:"relative" }}>
+      <div ref={containerRef} style={{ height:260, background:"#e8e8ea", position:"relative" }}>
         {state.loading && (
           <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", flexDirection:"column", gap:10, zIndex:1 }}>
             <div style={{ display:"flex", gap:6 }}>
@@ -1163,8 +1163,11 @@ function RidesScreen({ data, setData, currentUser, toast }) {
     setSending(null);
   }
 
-  const upcoming = data.rides.filter(r => r.status === "upcoming");
-  const done     = data.rides.filter(r => r.status === "done");
+  const today = new Date().toISOString().slice(0,10);
+  // Auto-status: jeśli data minęła, traktuj jako zakończone
+  const ridesWithStatus = data.rides.map(r => ({ ...r, effectiveStatus: r.status === "upcoming" && r.date < today ? "done" : r.status }));
+  const upcoming = ridesWithStatus.filter(r => r.effectiveStatus === "upcoming").sort((a,b) => a.date.localeCompare(b.date));
+  const done     = ridesWithStatus.filter(r => r.effectiveStatus === "done").sort((a,b) => b.date.localeCompare(a.date));
 
   function RideRow({ r }) {
     const img = r.img || WOLF_BG;
@@ -1384,8 +1387,10 @@ function RacesScreen({ data, setData, currentUser, toast }) {
   }
 
   const MED = { gold:"🥇", silver:"🥈", bronze:"🥉" };
-  const upcoming = data.races.filter(r => r.status === "upcoming");
-  const done     = data.races.filter(r => r.status === "done");
+  const todayR = new Date().toISOString().slice(0,10);
+  const racesWithStatus = data.races.map(r => ({ ...r, effectiveStatus: r.status === "upcoming" && r.date < todayR ? "done" : r.status }));
+  const upcoming = racesWithStatus.filter(r => r.effectiveStatus === "upcoming").sort((a,b) => a.date.localeCompare(b.date));
+  const done     = racesWithStatus.filter(r => r.effectiveStatus === "done").sort((a,b) => b.date.localeCompare(a.date));
 
   function RaceCard({ r }) {
     return (
@@ -1891,7 +1896,7 @@ function AboutScreen({ data }) {
       {site.aboutText && (
         <Card sx={{ padding:"20px 18px", marginBottom:18 }}>
           <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.2, marginBottom:11, textTransform:"uppercase" }}>O WATASZE</div>
-          <p style={{ color:TEXT, fontSize:14, lineHeight:1.75, margin:0 }}>{site.aboutText}</p>
+          <p style={{ color:TEXT, fontSize:14, lineHeight:1.75, margin:0, whiteSpace:"pre-wrap" }}>{site.aboutText}</p>
         </Card>
       )}
 
@@ -1899,7 +1904,7 @@ function AboutScreen({ data }) {
         <Card sx={{ padding:"20px 18px", marginBottom:18, border:"1px solid " + REDB }}>
           <div style={{ fontFamily:FT, fontSize:10, color:RED, letterSpacing:2.2, marginBottom:11, textTransform:"uppercase" }}>CHCESZ DOŁĄCZYĆ?</div>
           <p style={{ color:SUB, fontSize:13, lineHeight:1.65, margin:0 }}>
-            {site.joinText}
+            <span style={{ whiteSpace:"pre-wrap" }}>{site.joinText}</span>
           </p>
         </Card>
       )}
@@ -2435,7 +2440,7 @@ export default function App() {
   async function loadRides()    { const { data: r } = await sb.from("rides").select("*").order("date",{ascending:false}); if(r) setData(d=>({...d, rides:r.map(rideFromDB)})); }
   async function loadRaces()    { const { data: r } = await sb.from("races").select("*, race_results(*)").order("date",{ascending:false}); if(r) setData(d=>({...d, races:r.map(raceFromDB)})); }
   async function loadSponsors() { const { data: r } = await sb.from("sponsors").select("*"); if(r) setData(d=>({...d, sponsors:r})); }
-  async function loadNotifs()   { const uid=authUidRef.current; if(!uid) return; const { data: r } = await sb.from("notifications").select("*").order("created_at",{ascending:false}); if(r) setData(d=>({...d, notifs:r.map(n=>notifFromDB(n,uid))})); }
+  async function loadNotifs()   { const uid=authUidRef.current; const { data: r } = await sb.from("notifications").select("*").order("created_at",{ascending:false}); if(r) setData(d=>({...d, notifs:r.map(n=>notifFromDB(n,uid))})); }
 
   // Service Worker registration
   useEffect(() => {
@@ -2529,7 +2534,7 @@ export default function App() {
     return (
       <>
         <style>{GCSS}</style>
-        <AuthScreen users={data.users} onLogin={handleLogin} onRegister={handleRegister} onGuest={handleGuest} />
+        <AuthScreen users={data.users} site={data.site} onLogin={handleLogin} onRegister={handleRegister} onGuest={handleGuest} />
         {toastMsg && <Toast {...toastMsg} onDone={() => setToastMsg(null)} />}
       </>
     );
@@ -2599,9 +2604,11 @@ export default function App() {
                     </div>
                   </button>
                   <Btn size="sm" v="danger" sx={{ width:"100%" }} onClick={handleLogout}><ILogout /> WYLOGUJ SIĘ</Btn>
+                  <Btn size="sm" v="ghost" sx={{ width:"100%", marginTop:6 }} onClick={() => { if(installPrompt){ installPrompt.prompt(); } else { toast("Kliknij ikonę ⊕ lub ⬇ w pasku adresu"); } }}>📲 Zainstaluj</Btn>
                 </>
               ) : (
                 <Btn size="sm" sx={{ width:"100%" }} onClick={() => setShowAuth(true)}>ZALOGUJ SIĘ</Btn>
+              <Btn size="sm" v="ghost" sx={{ width:"100%", marginTop:6 }} onClick={() => { if(installPrompt){ installPrompt.prompt(); } else { toast("Kliknij ikonę ⊕ lub ⬇ w pasku adresu"); } }}>📲 Zainstaluj</Btn>
               )}
             </div>
           </div>
@@ -2708,9 +2715,11 @@ export default function App() {
                         </div>
                       </div>
                       <Btn size="sm" v="danger" sx={{ width:"100%" }} onClick={handleLogout}><ILogout /> WYLOGUJ SIĘ</Btn>
+                      <Btn size="sm" v="ghost" sx={{ width:"100%", marginTop:6 }} onClick={() => { setMenuOpen(false); if(installPrompt){ installPrompt.prompt(); } else { toast("Kliknij ikonę ⊕ lub ⬇ w pasku adresu przeglądarki"); } }}>📲 ZAINSTALUJ APLIKACJĘ</Btn>
                     </>
                   ) : (
                     <Btn size="sm" sx={{ width:"100%" }} onClick={() => { setMenuOpen(false); setShowAuth(true); }}>ZALOGUJ SIĘ</Btn>
+              <Btn size="sm" v="ghost" sx={{ width:"100%", marginTop:6 }} onClick={() => { setMenuOpen(false); if(installPrompt){ installPrompt.prompt(); } else { toast("Kliknij ikonę ⊕ lub ⬇ w pasku adresu przeglądarki"); } }}>📲 ZAINSTALUJ APLIKACJĘ</Btn>
                   )}
                 </div>
               </div>
