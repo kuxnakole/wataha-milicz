@@ -814,7 +814,7 @@ function HomeScreen({ data }) {
   return (
     <div className="fade-stagger">
       <div style={{ position:"relative", borderRadius:20, overflow:"hidden", marginBottom:18, minHeight:230, display:"flex", flexDirection:"column", justifyContent:"flex-end", background: site.heroImage ? "none" : HERO_GRAD, border:"1px solid " + REDB, boxShadow:"0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,0,38,0.10)" }}>
-        {site.heroImage && <img src={site.heroImage} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity:0.72 }} />}
+        {site.heroImage && <img src={site.heroImage} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity:0.92 }} />}
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top,rgba(8,8,10,0.97) 22%,rgba(8,8,10,0.20) 100%)" }} />
         {!site.heroImage && (
           <>
