@@ -1902,16 +1902,6 @@ function AboutScreen({ data }) {
   return (
     <div className="fade-stagger">
       <SHead title="O NAS" sub="Kim jest Wataha Milicz?" />
-      <Card accent sx={{ padding:"24px 20px", marginBottom:18 }}>
-        <div style={{ display:"flex", alignItems:"center", gap:15, marginBottom:15 }}>
-          <ClubLogo site={site} size={60} />
-          <div>
-            <div style={{ fontFamily:FT, fontSize:21, fontWeight:700, letterSpacing:1.2, textTransform:"uppercase" }}>{site.clubName}</div>
-            <div style={{ color:SUB, fontSize:13 }}>{site.subtitle}</div>
-          </div>
-        </div>
-        <p style={{ color:SUB, fontSize:14, lineHeight:1.75, margin:0 }}>{site.motto}</p>
-      </Card>
 
       {/* Zdjęcie na stronie O nas — osobne od hero na stronie głównej */}
       {site.aboutImage && (
