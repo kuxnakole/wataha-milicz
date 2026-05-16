@@ -2201,41 +2201,21 @@ function AdminScreen({ data, setData, toast }) {
   async function sendNotif() {
     if (!nlForm.title || !nlForm.body) return;
     const id = "n" + Date.now();
-    const n = { id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time:"teraz", read:false };
-    setData(d => ({ ...d, notifs:[n, ...d.notifs] }));
-    // Zapisz do bazy
+    // Zapisz do bazy (widoczne w aplikacji)
+    setData(d => ({ ...d, notifs:[{ id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time:"teraz", read:false }, ...d.notifs] }));
     await sb.from("notifications").insert({ id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time_label:"teraz", read_by:[] });
-    // Wyślij push — przez Make.com webhook (jeśli skonfigurowany) LUB Edge Function
-    const webhookUrl = site.webhookUrl;
-    if (webhookUrl) {
-      // Make.com webhook — Make.com wywołuje OneSignal REST API
+    // Wyślij przez Make.com webhook jeśli skonfigurowany
+    if (site.webhookUrl) {
       try {
-        await fetch(webhookUrl, {
+        await fetch(site.webhookUrl, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            type: "notification",
-            title: nlForm.title,
-            body:  nlForm.body,
-            url:   "https://watahamilicz.pl",
-          }),
+          body: JSON.stringify({ type:"notification", title:nlForm.title, body:nlForm.body, url:"https://watahamilicz.pl" }),
         });
-        toast("Powiadomienie wysłane!");
-      } catch(e) { console.warn("[PUSH] Webhook error:", e); toast("Powiadomienie zapisane"); }
-    } else {
-      // Fallback — Edge Function
-      try {
-        const { data: { session } } = await sb.auth.getSession();
-        const res = await fetch(`${SB_URL}/functions/v1/send-push`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
-          body: JSON.stringify({ title: nlForm.title, body: nlForm.body }),
-        });
-        const result = await res.json();
-        toast(`Powiadomienie wysłane! (${result.recipients || 0} urządzeń)`);
-      } catch(e) { toast("Powiadomienie zapisane"); }
+      } catch(e) { console.warn("Webhook error:", e); }
     }
     setNlForm({ title:"", body:"", type:"news" });
+    toast("Powiadomienie wysłane!");
   }
 
   const TABS = [{ id:"site", l:"Strona" },{ id:"users", l:"Uzytkownicy" },{ id:"social", l:"Social" },{ id:"notif", l:"Powiadomienia" }];
@@ -2485,7 +2465,6 @@ export default function App() {
       const profile = { ...profileFromDB(p), email: authUser.email };
       console.log("[AUTH] setUser:", profile.name, profile.role);
       setUser(profile);
-      subscribeToPush(authUser.id); // subskrybuj push po zalogowaniu
       setData(d => ({ ...d, users: d.users.find(u => u.id === p.id) ? d.users.map(u => u.id === p.id ? profile : u) : [...d.users, profile] }));
       // Załaduj notyfikacje z user-specific read state (po zalogowaniu/odświeżeniu)
       loadNotifs();
@@ -2514,18 +2493,7 @@ export default function App() {
   }, []);
 
   // OneSignal — inicjalizacja i subskrypcja po logowaniu
-  const OS_APP_ID = "2c454274-778b-4e89-b07c-337f5ab1e05b";
 
-  // OneSignal — init jest w index.html, tu tylko linkujemy usera po logowaniu
-  function subscribeToPush(uid) {
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async (OS) => {
-      try {
-        await OS.login(uid);
-        console.log("[PUSH] OneSignal user linked:", uid);
-      } catch(e) { console.warn("[PUSH] login error:", e); }
-    });
-  }
 
   async function loadAllData() {
     // Ładuje dane w tle — nie blokuje UI
@@ -2608,55 +2576,7 @@ export default function App() {
     return () => clearTimeout(t);
   }, [user]);
 
-  // Trigger local notification when a new notif appears (only for logged-in users)
-  const lastNotifId = useRef(
-    typeof window !== "undefined" ? (localStorage.getItem("wm_last_notif_id") || null) : null
-  );
-  // jeśli localStorage ma zapisany ID → aplikacja była już uruchomiona → pomiń "pierwsze ładowanie"
-  const initialLoadDoneRef = useRef(
-    typeof window !== "undefined" && !!localStorage.getItem("wm_last_notif_id")
-  );
-  useEffect(() => {
-    if (!user) return;
-    const newest = data.notifs[0];
-    if (!newest) return;
 
-    // Pierwsze uruchomienie — zapamiętaj ID ale nie pokazuj
-    if (!initialLoadDoneRef.current) {
-      lastNotifId.current = newest.id;
-      try { localStorage.setItem("wm_last_notif_id", newest.id); } catch(_) {}
-      initialLoadDoneRef.current = true;
-      return;
-    }
-
-    if (newest.id === lastNotifId.current) return; // to samo powiadomienie
-    if (newest.read || getLocalReadNotifs().has(newest.id)) return; // już przeczytane
-
-    // Nowe, nieprzeczytane powiadomienie!
-    lastNotifId.current = newest.id;
-    try { localStorage.setItem("wm_last_notif_id", newest.id); } catch(_) {}
-
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-    if (Notification.permission !== "granted") return;
-    try {
-      if (navigator.serviceWorker && navigator.serviceWorker.ready) {
-        navigator.serviceWorker.ready.then(reg => {
-          reg.showNotification(newest.title, {
-            body: newest.body,
-            icon: "/icon-192.png",
-            badge: "/icon-192.png",
-            vibrate: [80, 40, 80],
-            tag: newest.id,
-            data: { url: "/" },
-          });
-        }).catch(() => {
-          new Notification(newest.title, { body: newest.body, icon: "/icon-192.png" });
-        });
-      } else {
-        new Notification(newest.title, { body: newest.body, icon: "/icon-192.png" });
-      }
-    } catch(_) {}
-  }, [data.notifs, user]);
 
   const toast   = (msg, type = "success") => setToastMsg({ msg, type });
   const nav     = id => { setPage(id); setMenuOpen(false); window.scrollTo({ top:0, behavior:"smooth" }); };
@@ -2667,10 +2587,7 @@ export default function App() {
   function handleRegister(u) { setShowAuth(false); }
   function handleGuest()     { setShowAuth(false); }
   async function handleLogout() {
-    // OneSignal logout — odpisz urządzenie od usera
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async (OS) => { try { await OS.logout(); } catch(_) {} });
-    await sb.auth.signOut();
+await sb.auth.signOut();
     setUser(null); setPage("home"); toast("Wylogowano pomyślnie");
   }
 
