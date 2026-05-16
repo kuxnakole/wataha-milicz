@@ -832,7 +832,7 @@ function HomeScreen({ data }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:18 }}>
         {[
           { Icon:ICoffee, v:doneRides,             l:"COFFEE RIDES",  c:RED  },
-          { Icon:() => <Ico><path d="M3 12h18M3 6l9-3 9 3M3 18l9 3 9-3"/></Ico>, v:totalKm + " km", l:"KILOMETRY", c:"#3B82F6" },
+          { Icon:() => <Ico strokeWidth="1.5"><path d="M6 21S1 14 1 10.5a5 5 0 1 1 10 0C11 14 6 21 6 21z"/><path d="M18 10s-3-4.5-3-7a3 3 0 1 1 6 0c0 2.5-3 7-3 7z"/><path d="M9 18c1.5-2.5 4.5-5.5 6-8"/></Ico>, v:totalKm + " km", l:"KILOMETRY", c:"#3B82F6" },
           { Icon:IUsers,  v:team.length,           l:"ZAWODNICY",     c:GRN  },
           { Icon:ITrophy, v:totalMedals,           l:"MEDALE",        c:GOLD },
         ].map(s => (
