@@ -13,6 +13,14 @@ const sb = createClient(SB_URL, SB_KEY, {
   }
 });
 
+// ── NATIVE WEB PUSH (VAPID) ───────────────────────────────────────
+const VAPID_PUB = "BMw-OgdV8XVwjGrbwrBfEzjI8qOSatDiUU7j_EdMXuoxVl7WOHhYJxJhg3HDU4EChlPeAj-Evc34Frdxz7rnQEM";
+function b64ToUint8(b64) {
+  const pad = b64.length % 4 === 0 ? 0 : 4 - b64.length % 4;
+  const s = b64.replace(/-/g,"+").replace(/_/g,"/") + "====".slice(0,pad);
+  return Uint8Array.from(atob(s), c => c.charCodeAt(0));
+}
+
 // ── STORAGE HELPERS ───────────────────────────────────────────
 async function uploadFile(bucket, path, file) {
   const { error } = await sb.storage.from(bucket).upload(path, file, { upsert:true });
@@ -2465,6 +2473,7 @@ export default function App() {
       const profile = { ...profileFromDB(p), email: authUser.email };
       console.log("[AUTH] setUser:", profile.name, profile.role);
       setUser(profile);
+      setTimeout(() => subscribeToPush(authUser.id), 1500);
       setData(d => ({ ...d, users: d.users.find(u => u.id === p.id) ? d.users.map(u => u.id === p.id ? profile : u) : [...d.users, profile] }));
       // Załaduj notyfikacje z user-specific read state (po zalogowaniu/odświeżeniu)
       loadNotifs();
@@ -2525,6 +2534,26 @@ export default function App() {
     } finally {
       setDataReady(true);
     }
+  }
+
+  async function subscribeToPush(uid) {
+    try {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) return;
+      const perm = await Notification.requestPermission();
+      if (perm !== "granted") return;
+      const reg = await navigator.serviceWorker.ready;
+      const existing = await reg.pushManager.getSubscription();
+      const sub = existing || await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: b64ToUint8(VAPID_PUB),
+      });
+      const j = sub.toJSON();
+      await sb.from("push_subscriptions").upsert(
+        { user_id:uid, endpoint:j.endpoint, p256dh:j.keys.p256dh, auth:j.keys.auth },
+        { onConflict:"endpoint" }
+      );
+      console.log("[PUSH] Subscribed!");
+    } catch(e) { console.warn("[PUSH] Subscribe error:", e); }
   }
 
   async function loadRides()    { const { data: r } = await sb.from("rides").select("*").order("date",{ascending:false}); if(r) setData(d=>({...d, rides:r.map(rideFromDB)})); }
