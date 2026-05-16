@@ -751,7 +751,7 @@ function AuthScreen({ users, onLogin, onRegister, onGuest, site: authSite }) {
           <ClubLogo site={authSite || INIT_SITE} size={96} />
         </div>
         <h1 style={{ fontFamily:FT, fontSize:26, fontWeight:700, letterSpacing:3.5, margin:"0 0 5px", color:TEXT }}>WATAHA MILICZ</h1>
-        <p style={{ color:SUB, fontSize:11, margin:0, letterSpacing:2.4, fontFamily:FT, textTransform:"uppercase" }}>MILICZ BIKE COLLECTIVE</p>
+        <p style={{ color:SUB, fontSize:11, margin:0, letterSpacing:2.4, fontFamily:FT, textTransform:"uppercase" }}>BARYCZ BIKE COLLECTIVE</p>
       </div>
 
       <div style={{ background:SURF, backgroundImage:CARD_GRAD, borderRadius:20, padding:"24px 22px", width:"100%", maxWidth:400, border:"1px solid " + BDR, marginBottom:14, boxShadow:"0 16px 48px rgba(0,0,0,0.5)", position:"relative", animation:"fadeUp 0.55s " + SPR + " 0.08s both" }}>
@@ -825,13 +825,6 @@ function HomeScreen({ data }) {
           </>
         )}
         <div style={{ position:"relative", padding:"0 20px 24px" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:13, marginBottom:13 }}>
-            <ClubLogo site={site} size={50} />
-            <div>
-              <div style={{ fontSize:9, color:RED, letterSpacing:3.5, fontFamily:FT, fontWeight:600, textTransform:"uppercase" }}>{site.subtitle}</div>
-              <h1 style={{ margin:0, fontFamily:FT, fontSize:26, fontWeight:700, letterSpacing:2.2, lineHeight:1.05, textTransform:"uppercase" }}>{site.clubName}</h1>
-            </div>
-          </div>
           <p style={{ color:SUB, fontSize:13, margin:"0 0 4px", lineHeight:1.65 }}>{site.motto}</p>
         </div>
       </div>
@@ -839,7 +832,7 @@ function HomeScreen({ data }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:18 }}>
         {[
           { Icon:ICoffee, v:doneRides,             l:"COFFEE RIDES",  c:RED  },
-          { Icon:() => <Ico><path d="M20 7l-8-4-8 4m16 0-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></Ico>, v:totalKm + " km",       l:"KILOMETRY",     c:"#3B82F6" },
+          { Icon:() => <Ico><path d="M3 12h18M3 6l9-3 9 3M3 18l9 3 9-3"/></Ico>, v:totalKm + " km", l:"KILOMETRY", c:"#3B82F6" },
           { Icon:IUsers,  v:team.length,           l:"ZAWODNICY",     c:GRN  },
           { Icon:ITrophy, v:totalMedals,           l:"MEDALE",        c:GOLD },
         ].map(s => (
@@ -2678,7 +2671,7 @@ export default function App() {
           </div>
           {/* Name */}
           <h1 style={{ fontFamily:FT, fontSize:30, fontWeight:700, letterSpacing:4.5, color:"#F5F5F7", margin:"0 0 8px", textTransform:"uppercase", position:"relative", zIndex:1 }}>WATAHA MILICZ</h1>
-          <p style={{ fontFamily:FT, fontSize:11, color:RED, letterSpacing:3.2, margin:"0 0 36px", textTransform:"uppercase", fontWeight:600, position:"relative", zIndex:1 }}>MILICZ BIKE COLLECTIVE</p>
+          <p style={{ fontFamily:FT, fontSize:11, color:RED, letterSpacing:3.2, margin:"0 0 36px", textTransform:"uppercase", fontWeight:600, position:"relative", zIndex:1 }}>BARYCZ BIKE COLLECTIVE</p>
           {/* Dots */}
           <div style={{ display:"flex", gap:8, position:"relative", zIndex:1 }}>
             <div style={{ width:9, height:9, borderRadius:"50%", background:RED, animation:"dot1 1.2s ease-in-out infinite", boxShadow:"0 0 10px " + REDG }} />
