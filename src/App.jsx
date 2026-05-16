@@ -2504,39 +2504,24 @@ export default function App() {
   const OS_APP_ID = "2c454274-778b-4e89-b07c-337f5ab1e05b";
 
   useEffect(() => {
-    // OneSignal init — autoPrompt pyta automatycznie po wejściu na stronę
+    // OneSignal init v16 — minimalna konfiguracja
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OS) => {
       try {
-        await OS.init({
-          appId: OS_APP_ID,
-          notifyButton: { enable: false },
-          serviceWorkerPath: "/OneSignalSDKWorker.js",
-          serviceWorkerUpdaterPath: "/OneSignalSDKUpdaterWorker.js",
-          autoResubscribe: true,
-        });
-        console.log("[PUSH] OneSignal initialized");
-      } catch(e) { console.warn("[PUSH] OneSignal init error:", e); }
+        await OS.init({ appId: OS_APP_ID });
+        console.log("[PUSH] OneSignal OK");
+      } catch(e) { console.warn("[PUSH] init error:", e); }
     });
   }, []);
 
   function subscribeToPush(uid) {
-    // Poczekaj aż OneSignal będzie gotowy, potem poproś o zgodę i zaloguj usera
-    const trySubscribe = async () => {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OS) => {
       try {
-        const OS = window.OneSignal;
-        if (!OS) { setTimeout(trySubscribe, 1000); return; }
-        // Zapytaj o zgodę jeśli jeszcze nie udzielono
-        const permission = await Notification.requestPermission();
-        console.log("[PUSH] Permission:", permission);
-        if (permission === "granted") {
-          await OS.User.PushSubscription.optIn();
-          await OS.login(uid);
-          console.log("[PUSH] Subscribed user:", uid);
-        }
-      } catch(e) { console.warn("[PUSH] Subscribe error:", e); }
-    };
-    setTimeout(trySubscribe, 2000); // poczekaj 2s aż OneSignal się załaduje
+        await OS.login(uid);
+        console.log("[PUSH] Logged in:", uid);
+      } catch(e) { console.warn("[PUSH] login error:", e); }
+    });
   }
 
   async function loadAllData() {
