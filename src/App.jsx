@@ -2573,7 +2573,14 @@ export default function App() {
   async function loadSponsors() { const { data: r } = await sb.from("sponsors").select("*"); if(r) setData(d=>({...d, sponsors:r})); }
   async function loadNotifs()   { const uid=authUidRef.current; const { data: r } = await sb.from("notifications").select("*").order("created_at",{ascending:false}); if(r) setData(d=>({...d, notifs:r.map(n=>notifFromDB(n,uid))})); }
 
-  // Service Worker registration
+  // Odśwież powiadomienia gdy app wraca na pierwszy plan (po kliknięciu push)
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === "visible") loadNotifs();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, []);
   useEffect(() => {
     if ("serviceWorker" in navigator) {
       navigator.serviceWorker.register("/service-worker.js").catch(err => console.warn("SW registration failed:", err));
