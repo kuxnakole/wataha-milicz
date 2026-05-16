@@ -2205,22 +2205,35 @@ function AdminScreen({ data, setData, toast }) {
     setData(d => ({ ...d, notifs:[n, ...d.notifs] }));
     // Zapisz do bazy
     await sb.from("notifications").insert({ id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time_label:"teraz", read_by:[] });
-    // Wyślij Web Push przez OneSignal Edge Function
-    try {
-      const { data: { session } } = await sb.auth.getSession();
-      const res = await fetch(`${SB_URL}/functions/v1/send-push`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${session?.access_token}`,
-        },
-        body: JSON.stringify({ title: nlForm.title, body: nlForm.body, url: "/" }),
-      });
-      const result = await res.json();
-      toast(`Powiadomienie wysłane! (${result.recipients || 0} urządzeń)`);
-    } catch(e) {
-      console.warn("[PUSH] Edge Function error:", e);
-      toast("Powiadomienie zapisane");
+    // Wyślij push — przez Make.com webhook (jeśli skonfigurowany) LUB Edge Function
+    const webhookUrl = site.webhookUrl;
+    if (webhookUrl) {
+      // Make.com webhook — Make.com wywołuje OneSignal REST API
+      try {
+        await fetch(webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "notification",
+            title: nlForm.title,
+            body:  nlForm.body,
+            url:   "https://watahamilicz.pl",
+          }),
+        });
+        toast("Powiadomienie wysłane!");
+      } catch(e) { console.warn("[PUSH] Webhook error:", e); toast("Powiadomienie zapisane"); }
+    } else {
+      // Fallback — Edge Function
+      try {
+        const { data: { session } } = await sb.auth.getSession();
+        const res = await fetch(`${SB_URL}/functions/v1/send-push`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${session?.access_token}` },
+          body: JSON.stringify({ title: nlForm.title, body: nlForm.body }),
+        });
+        const result = await res.json();
+        toast(`Powiadomienie wysłane! (${result.recipients || 0} urządzeń)`);
+      } catch(e) { toast("Powiadomienie zapisane"); }
     }
     setNlForm({ title:"", body:"", type:"news" });
   }
@@ -2503,23 +2516,13 @@ export default function App() {
   // OneSignal — inicjalizacja i subskrypcja po logowaniu
   const OS_APP_ID = "2c454274-778b-4e89-b07c-337f5ab1e05b";
 
-  useEffect(() => {
-    // OneSignal init v16 — minimalna konfiguracja
-    window.OneSignalDeferred = window.OneSignalDeferred || [];
-    window.OneSignalDeferred.push(async (OS) => {
-      try {
-        await OS.init({ appId: OS_APP_ID });
-        console.log("[PUSH] OneSignal OK");
-      } catch(e) { console.warn("[PUSH] init error:", e); }
-    });
-  }, []);
-
+  // OneSignal — init jest w index.html, tu tylko linkujemy usera po logowaniu
   function subscribeToPush(uid) {
     window.OneSignalDeferred = window.OneSignalDeferred || [];
     window.OneSignalDeferred.push(async (OS) => {
       try {
         await OS.login(uid);
-        console.log("[PUSH] Logged in:", uid);
+        console.log("[PUSH] OneSignal user linked:", uid);
       } catch(e) { console.warn("[PUSH] login error:", e); }
     });
   }
