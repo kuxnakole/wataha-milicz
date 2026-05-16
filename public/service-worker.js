@@ -1,113 +1,74 @@
-// ═══════════════════════════════════════════════════════════════
-// WATAHA MILICZ — Service Worker
-// Caching strategy: stale-while-revalidate for app shell + assets
-// Push notifications: receives Web Push events from server
-// ═══════════════════════════════════════════════════════════════
+// ── WATAHA MILICZ Service Worker ──────────────────────────────
+const CACHE = "wataha-v3";
+const OFFLINE_ASSETS = ["/", "/index.html"];
 
-const CACHE_NAME = "wataha-cache-v1";
-const APP_SHELL = [
-  "/",
-  "/index.html",
-  "/manifest.webmanifest",
-  "/icon-192.png",
-  "/icon-512.png",
-  "/apple-touch-icon.png",
-];
-
-// ── INSTALL: pre-cache app shell ─────────────────────────────
-self.addEventListener("install", event => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => cache.addAll(APP_SHELL))
-      .then(() => self.skipWaiting())
-      .catch(err => console.warn("[SW] Pre-cache failed:", err))
+// Install
+self.addEventListener("install", e => {
+  e.waitUntil(
+    caches.open(CACHE).then(c => c.addAll(OFFLINE_ASSETS)).then(() => self.skipWaiting())
   );
 });
 
-// ── ACTIVATE: clean old caches ────────────────────────────────
-self.addEventListener("activate", event => {
-  event.waitUntil(
-    caches.keys()
-      .then(keys => Promise.all(
-        keys.filter(k => k !== CACHE_NAME).map(k => caches.delete(k))
-      ))
-      .then(() => self.clients.claim())
+// Activate
+self.addEventListener("activate", e => {
+  e.waitUntil(
+    caches.keys().then(keys =>
+      Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    ).then(() => self.clients.claim())
   );
 });
 
-// ── FETCH: stale-while-revalidate for same-origin GET ────────
-self.addEventListener("fetch", event => {
-  const req = event.request;
-  if (req.method !== "GET") return;
-
-  const url = new URL(req.url);
-
-  // Bypass cross-origin (tiles, CDN libs, fonts) — let the browser handle them
-  if (url.origin !== self.location.origin) return;
-
-  // Don't cache the SW itself or POST endpoints
-  if (url.pathname === "/service-worker.js") return;
-
-  event.respondWith(
-    caches.open(CACHE_NAME).then(cache =>
-      cache.match(req).then(cached => {
-        const networkFetch = fetch(req).then(res => {
-          if (res && res.status === 200 && res.type === "basic") {
-            cache.put(req, res.clone());
-          }
-          return res;
-        }).catch(() => cached);
-        return cached || networkFetch;
-      })
-    )
-  );
-});
-
-// ── PUSH: handle incoming Web Push messages from server ──────
-self.addEventListener("push", event => {
-  let payload = {};
-  try {
-    payload = event.data ? event.data.json() : {};
-  } catch (_) {
-    payload = { title: "Wataha Milicz", body: event.data ? event.data.text() : "" };
-  }
-
-  const title = payload.title || "Wataha Milicz";
-  const options = {
-    body: payload.body || "",
-    icon: payload.icon || "/icon-192.png",
-    badge: "/icon-192.png",
-    vibrate: [80, 40, 80],
-    tag: payload.tag || "wataha-" + Date.now(),
-    renotify: !!payload.renotify,
-    data: { url: payload.url || "/", ...payload.data },
-    actions: payload.actions || [],
-  };
-
-  event.waitUntil(self.registration.showNotification(title, options));
-});
-
-// ── NOTIFICATION CLICK: focus or open the app ────────────────
-self.addEventListener("notificationclick", event => {
-  event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || "/";
-
-  event.waitUntil(
-    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
-      for (const client of list) {
-        if ("focus" in client) {
-          client.postMessage({ type: "notification-click", url: targetUrl });
-          return client.focus();
+// Fetch — stale-while-revalidate
+self.addEventListener("fetch", e => {
+  if (e.request.method !== "GET") return;
+  if (!e.request.url.startsWith("http")) return;
+  e.respondWith(
+    caches.match(e.request).then(cached => {
+      const fresh = fetch(e.request).then(res => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then(c => c.put(e.request, clone));
         }
-      }
-      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+        return res;
+      }).catch(() => cached);
+      return cached || fresh;
     })
   );
 });
 
-// ── MESSAGE: allow client to trigger SW updates ──────────────
-self.addEventListener("message", event => {
-  if (event.data && event.data.type === "SKIP_WAITING") {
-    self.skipWaiting();
-  }
+// ── WEB PUSH — powiadomienia w tle ────────────────────────────
+self.addEventListener("push", e => {
+  let data = { title: "Wataha Milicz", body: "Nowe powiadomienie", url: "/" };
+  try { if (e.data) data = { ...data, ...e.data.json() }; } catch (_) {}
+
+  e.waitUntil(
+    self.registration.showNotification(data.title, {
+      body:    data.body,
+      icon:    "/icon-192.png",
+      badge:   "/icon-192.png",
+      image:   data.image || undefined,
+      vibrate: [100, 50, 100],
+      tag:     data.tag || "wataha-notif",
+      renotify: true,
+      data:    { url: data.url || "/" },
+      actions: [{ action: "open", title: "Otwórz Watahę" }],
+    })
+  );
+});
+
+// Klik w powiadomienie — otwórz/focus aplikację
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  const url = e.notification.data?.url || "/";
+  e.waitUntil(
+    clients.matchAll({ type: "window", includeUncontrolled: true }).then(list => {
+      for (const c of list) {
+        if (c.url.includes(self.location.origin)) {
+          c.focus();
+          return c.navigate(url);
+        }
+      }
+      return clients.openWindow(url);
+    })
+  );
 });

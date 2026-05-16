@@ -2203,9 +2203,26 @@ function AdminScreen({ data, setData, toast }) {
     const id = "n" + Date.now();
     const n = { id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time:"teraz", read:false };
     setData(d => ({ ...d, notifs:[n, ...d.notifs] }));
+    // Zapisz do bazy
     await sb.from("notifications").insert({ id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time_label:"teraz", read_by:[] });
+    // Wyślij Web Push przez OneSignal Edge Function
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const res = await fetch(`${SB_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({ title: nlForm.title, body: nlForm.body, url: "/" }),
+      });
+      const result = await res.json();
+      toast(`Powiadomienie wysłane! (${result.recipients || 0} urządzeń)`);
+    } catch(e) {
+      console.warn("[PUSH] Edge Function error:", e);
+      toast("Powiadomienie zapisane");
+    }
     setNlForm({ title:"", body:"", type:"news" });
-    toast("Powiadomienie wysłane do wszystkich!");
   }
 
   const TABS = [{ id:"site", l:"Strona" },{ id:"users", l:"Uzytkownicy" },{ id:"social", l:"Social" },{ id:"notif", l:"Powiadomienia" }];
@@ -2455,6 +2472,7 @@ export default function App() {
       const profile = { ...profileFromDB(p), email: authUser.email };
       console.log("[AUTH] setUser:", profile.name, profile.role);
       setUser(profile);
+      subscribeToPush(authUser.id); // subskrybuj push po zalogowaniu
       setData(d => ({ ...d, users: d.users.find(u => u.id === p.id) ? d.users.map(u => u.id === p.id ? profile : u) : [...d.users, profile] }));
       // Załaduj notyfikacje z user-specific read state (po zalogowaniu/odświeżeniu)
       loadNotifs();
@@ -2481,6 +2499,32 @@ export default function App() {
       .subscribe();
     return () => sb.removeChannel(ch);
   }, []);
+
+  // OneSignal — inicjalizacja i subskrypcja po logowaniu
+  const OS_APP_ID = "2c454274-778b-4e89-b07c-337f5ab1e05b";
+
+  useEffect(() => {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OS) => {
+      await OS.init({
+        appId: OS_APP_ID,
+        notifyButton: { enable: false },
+        serviceWorkerPath: "/OneSignalSDKWorker.js",
+        promptOptions: { slidedown: { prompts: [{ type: "push", autoPrompt: false }] } },
+      });
+    });
+  }, []);
+
+  function subscribeToPush(uid) {
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OS) => {
+      try {
+        await OS.User.PushSubscription.optIn();
+        await OS.login(uid);
+        console.log("[PUSH] OneSignal subscribed for user:", uid);
+      } catch(e) { console.warn("[PUSH] OneSignal subscribe error:", e); }
+    });
+  }
 
   async function loadAllData() {
     // Ładuje dane w tle — nie blokuje UI
@@ -2622,6 +2666,9 @@ export default function App() {
   function handleRegister(u) { setShowAuth(false); }
   function handleGuest()     { setShowAuth(false); }
   async function handleLogout() {
+    // OneSignal logout — odpisz urządzenie od usera
+    window.OneSignalDeferred = window.OneSignalDeferred || [];
+    window.OneSignalDeferred.push(async (OS) => { try { await OS.logout(); } catch(_) {} });
     await sb.auth.signOut();
     setUser(null); setPage("home"); toast("Wylogowano pomyślnie");
   }
