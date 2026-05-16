@@ -2210,7 +2210,7 @@ function AdminScreen({ data, setData, toast }) {
     const rr = new FileReader();
     rr.onload = ev => {
       if (key === "logoImage") setSite(s => ({ ...s, logoImage: ev.target.result, logoType:"image" }));
-      else setSite(s => ({ ...s, heroImage: ev.target.result }));
+      else setSite(s => ({ ...s, [key]: ev.target.result }));
     };
     rr.readAsDataURL(f);
   }
