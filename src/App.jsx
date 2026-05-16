@@ -2209,21 +2209,33 @@ function AdminScreen({ data, setData, toast }) {
   async function sendNotif() {
     if (!nlForm.title || !nlForm.body) return;
     const id = "n" + Date.now();
-    // Zapisz do bazy (widoczne w aplikacji)
     setData(d => ({ ...d, notifs:[{ id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time:"teraz", read:false }, ...d.notifs] }));
     await sb.from("notifications").insert({ id, type:nlForm.type, title:nlForm.title, body:nlForm.body, time_label:"teraz", read_by:[] });
-    // Wyślij przez Make.com webhook jeśli skonfigurowany
+
+    // Wyślij push przez Edge Function (web-push VAPID)
+    try {
+      const { data: { session } } = await sb.auth.getSession();
+      const res = await fetch(`${SB_URL}/functions/v1/send-push`, {
+        method: "POST",
+        headers: { "Content-Type":"application/json", "Authorization":`Bearer ${session?.access_token}` },
+        body: JSON.stringify({ title:nlForm.title, body:nlForm.body }),
+      });
+      const result = await res.json();
+      console.log("[PUSH] result:", result);
+      toast(`Powiadomienie wysłane! (${result.sent || 0} urządzeń)`);
+    } catch(e) {
+      console.warn("[PUSH] error:", e);
+      toast("Powiadomienie zapisane");
+    }
+
+    // Opcjonalnie — Make.com webhook
     if (site.webhookUrl) {
-      try {
-        await fetch(site.webhookUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ type:"notification", title:nlForm.title, body:nlForm.body, url:"https://watahamilicz.pl" }),
-        });
-      } catch(e) { console.warn("Webhook error:", e); }
+      fetch(site.webhookUrl, {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({ type:"notification", title:nlForm.title, body:nlForm.body }),
+      }).catch(() => {});
     }
     setNlForm({ title:"", body:"", type:"news" });
-    toast("Powiadomienie wysłane!");
   }
 
   const TABS = [{ id:"site", l:"Strona" },{ id:"users", l:"Uzytkownicy" },{ id:"social", l:"Social" },{ id:"notif", l:"Powiadomienia" }];
