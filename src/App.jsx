@@ -1326,7 +1326,9 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
               <p style={{ color:TEXT, fontSize:13, lineHeight:1.7, margin:0 }}>{detail.desc}</p>
             </Card>
           )}
-          <RsvpBtn itemId={detail.id} user={currentUser} attendees={detail.attendees} onToggle={rsvpRide} />
+          {detail.status === "upcoming" && (
+            <RsvpBtn itemId={detail.id} user={currentUser} attendees={detail.attendees} onToggle={rsvpRide} upcoming />
+          )}
           {detail.gpxUrl && <GpxMap url={detail.gpxUrl} />}
           {detail.gpxText && !detail.gpxUrl && <GpxMap gpxText={detail.gpxText} fileName={detail.gpx} />}
           <GalleryGrid photos={detail.photos} isAdmin={isAdmin}
@@ -1482,34 +1484,32 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace }) {
           </div>
         )}
         <div style={{ padding:"14px 16px" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:7, gap:11 }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:9, gap:11 }}>
             {r.status !== "upcoming" && r.logo && (
               <img src={r.logo} alt="" style={{ width:46, height:46, borderRadius:10, objectFit:"cover", flexShrink:0, border:"1px solid " + BDR }} />
             )}
             <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontFamily:FT, fontSize:16, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase" }}>{r.name}</div>
-              {r.sub && <div style={{ color:SUB, fontSize:12, marginTop:1 }}>{r.sub}</div>}
+              <div style={{ fontFamily:FT, fontSize:16, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", wordBreak:"break-word" }}>{r.name}</div>
+              {r.sub && <div style={{ color:SUB, fontSize:12, marginTop:2 }}>{r.sub}</div>}
+              <div style={{ display:"flex", gap:6, alignItems:"center", marginTop:6, flexWrap:"wrap" }}>
+                {es === "upcoming" && <Pill label="NADCHODZI" />}
+                {r.race_type && <Pill label={r.race_type === "rajd" ? "🚵 RAJD" : "🏁 WYŚCIG"} color={MUTED} sz={9} />}
+              </div>
             </div>
-            <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0, marginLeft:8 }}>
-              {es === "upcoming" && <Pill label="Nadchodzi" />}
-              <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} />
-              {isAdmin && (
-                <div style={{ display:"flex", gap:5 }}>
-                  <button onClick={() => toggleRaceStatus(r)} title={es === "upcoming" ? "Zakończ" : "Przywróć"}
-                    style={{ background:es==="upcoming"?REDD:SURF2, border:"1px solid "+(es==="upcoming"?REDB:BDR), color:es==="upcoming"?RED:SUB, borderRadius:7, padding:"5px 8px", cursor:"pointer", fontSize:10, fontFamily:FT, fontWeight:700, letterSpacing:0.5 }}>
-                    {es === "upcoming" ? "✓ ZAKOŃCZ" : "↩ WRÓĆ"}
-                  </button>
-                  <button onClick={() => { setForm({ ...r, dists: r.dists || [{ lbl:"", km:"" }] }); setEditRace(r); setShowForm(true); }}
-                    style={{ background:SURF2, border:"1px solid " + BDR, color:SUB, borderRadius:7, padding:"5px 8px", cursor:"pointer", display:"flex" }}>
-                    <IEdit />
-                  </button>
-                  <button onClick={() => { if(window.confirm("Usunąć ten start?")) delRace(r.id); }}
-                    style={{ background:REDD, border:"1px solid " + REDB, color:RED, borderRadius:7, padding:"5px 8px", cursor:"pointer", display:"flex" }}>
-                    <ITrash />
-                  </button>
-                </div>
-              )}
-            </div>
+            {isAdmin && (
+              <div style={{ display:"flex", gap:5, flexShrink:0 }}>
+                <button onClick={() => { setForm({ ...r, dists: r.dists || [{ lbl:"", km:"" }] }); setEditRace(r); setShowForm(true); }}
+                  title="Edytuj"
+                  style={{ background:SURF2, border:"1px solid " + BDR, color:SUB, borderRadius:7, padding:"6px 8px", cursor:"pointer", display:"flex" }}>
+                  <IEdit />
+                </button>
+                <button onClick={() => { if(window.confirm("Usunąć ten start?")) delRace(r.id); }}
+                  title="Usuń"
+                  style={{ background:REDD, border:"1px solid " + REDB, color:RED, borderRadius:7, padding:"6px 8px", cursor:"pointer", display:"flex" }}>
+                  <ITrash />
+                </button>
+              </div>
+            )}
           </div>
           <div style={{ display:"flex", gap:14, color:SUB, fontSize:12, flexWrap:"wrap", marginBottom:7 }}>
             {r.date && <span>📅 {r.date}</span>}
@@ -1521,10 +1521,19 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace }) {
             </div>
           )}
 
+          {/* RSVP — tylko dla nadchodzących */}
+          {es === "upcoming" && (
+            <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} upcoming />
+          )}
+          {/* Licznik uczestników — dla zakończonych */}
+          {es !== "upcoming" && (
+            <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} upcoming={false} />
+          )}
+
           {(r.results || []).length > 0 && (
             <>
               <button onClick={() => setExp(e => ({ ...e, [r.id]:!e[r.id] }))}
-                style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:0, marginBottom:7, textTransform:"uppercase", fontWeight:600 }}>
+                style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:0, marginBottom:7, marginTop:11, textTransform:"uppercase", fontWeight:600 }}>
                 <span style={{ display:"flex", transform: exp[r.id] ? "rotate(180deg)" : "none", transition:"transform 0.3s " + SPR }}><IChevD /></span>
                 {exp[r.id] ? "Ukryj wyniki" : "Wyniki (" + r.results.length + ")"}
               </button>
@@ -1553,11 +1562,23 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace }) {
               })}
             </>
           )}
+          {/* Galeria zdjęć — dla zakończonych startów */}
+          {es !== "upcoming" && (
+            <div style={{ marginTop:14 }}>
+              <GalleryGrid photos={r.photos} isAdmin={isAdmin}
+                onAdd={e => addPhotos("race", r.id, e.target.files)}
+                onDelete={p => deletePhoto("race", r.id, p)} />
+            </div>
+          )}
           {isAdmin && (
-            <div style={{ marginTop:11, paddingTop:11, borderTop:"1px solid " + BDR }}>
+            <div style={{ marginTop:11, paddingTop:11, borderTop:"1px solid " + BDR, display:"flex", gap:8, flexWrap:"wrap" }}>
               <Btn size="sm" v="ghost" onClick={() => { setResForm(emptyRes); setEditResIdx(null); setResRaceId(r.id); }}>
                 <IPlus /> Dodaj wynik
               </Btn>
+              <button onClick={() => toggleRaceStatus(r)}
+                style={{ background:es==="upcoming"?REDD:SURF2, border:"1px solid "+(es==="upcoming"?REDB:BDR), color:es==="upcoming"?RED:SUB, borderRadius:7, padding:"6px 12px", cursor:"pointer", fontSize:11, fontFamily:FT, fontWeight:700, letterSpacing:0.7, marginLeft:"auto" }}>
+                {es === "upcoming" ? "✓ ZAKOŃCZ START" : "↩ PRZYWRÓĆ"}
+              </button>
             </div>
           )}
         </div>
@@ -1940,19 +1961,28 @@ function SponsorsScreen({ data, setData, currentUser, toast }) {
 // ═══════════════════════════════════════════════════════════════
 
 // ── RSVP BUTTON ─────────────────────────────────────────────────
-function RsvpBtn({ itemId, user, attendees, onToggle }) {
+function RsvpBtn({ itemId, user, attendees, onToggle, upcoming = true, compact = false }) {
   if (!user) return null;
   const mine  = (attendees||[]).find(a => a.user_id === user.id);
   const going = (attendees||[]).filter(a => a.status === "going");
+  // Dla zakończonych: tylko licznik uczestników, bez akcji
+  if (!upcoming) {
+    if (going.length === 0) return null;
+    return (
+      <div style={{ display:"flex", alignItems:"center", gap:6, fontSize:11, color:SUB, marginTop:8 }}>
+        🚴 {going.length} {going.length===1?"jechał":"jechało"}
+      </div>
+    );
+  }
   const isGoing = mine?.status === "going";
   const isSet   = !!mine;
   return (
-    <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10 }}>
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginTop: compact ? 0 : 10, flexWrap:"wrap" }}>
       <button onClick={() => onToggle(itemId, isGoing ? "not_going" : "going")} className="no-tap"
         style={{ background: isGoing ? "#34C759" : isSet ? REDD : SURF2,
           border: isGoing ? "1px solid #34C75966" : isSet ? "1px solid "+REDB : "1px solid "+BDR,
           color: isGoing ? "#fff" : isSet ? RED : SUB,
-          borderRadius:9, padding:"8px 16px", cursor:"pointer", fontFamily:FT, fontWeight:700, fontSize:11, letterSpacing:0.8 }}>
+          borderRadius:9, padding: compact ? "6px 12px" : "8px 16px", cursor:"pointer", fontFamily:FT, fontWeight:700, fontSize: compact ? 10 : 11, letterSpacing:0.8 }}>
         {isGoing ? "✓ JADĘ" : isSet ? "✗ NIE JADĘ" : "+ POTWIERDZAM"}
       </button>
       {going.length > 0 && (
@@ -1967,11 +1997,23 @@ function RsvpBtn({ itemId, user, attendees, onToggle }) {
 // ── GALLERY GRID ─────────────────────────────────────────────────
 function GalleryGrid({ photos, isAdmin, onAdd, onDelete }) {
   const [lb, setLb] = useState(null);
+  const [uploading, setUploading] = useState(false);
+  const inputRef = useRef();
   if (!photos?.length && !isAdmin) return null;
+  async function handleAdd(e) {
+    if (!e.target.files?.length) return;
+    setUploading(true);
+    try { await onAdd(e); }
+    finally {
+      setUploading(false);
+      if (inputRef.current) inputRef.current.value = "";
+    }
+  }
   return (
     <div style={{ marginBottom:18 }}>
-      <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>
-        GALERIA {photos?.length > 0 ? `(${photos.length})` : ""}
+      <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:600, display:"flex", alignItems:"center", gap:8 }}>
+        <span>GALERIA {photos?.length > 0 ? `(${photos.length})` : ""}</span>
+        {uploading && <span style={{ color:RED, fontWeight:700 }}>· WGRYWAM...</span>}
       </div>
       <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:6 }}>
         {(photos||[]).map((p,i) => (
@@ -1983,10 +2025,10 @@ function GalleryGrid({ photos, isAdmin, onAdd, onDelete }) {
           </div>
         ))}
         {isAdmin && (
-          <label style={{ borderRadius:9, background:SURF2, border:"1px dashed "+BDR, aspectRatio:"1", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexDirection:"column", gap:4 }}>
-            <input type="file" accept="image/*" multiple onChange={onAdd} style={{ display:"none" }} />
-            <span style={{ fontSize:24, color:MUTED }}>+</span>
-            <span style={{ fontSize:9, color:MUTED, fontFamily:FT, letterSpacing:0.8 }}>DODAJ</span>
+          <label style={{ borderRadius:9, background:uploading?REDD:SURF2, border:"1px dashed "+(uploading?REDB:BDHI), aspectRatio:"1", display:"flex", alignItems:"center", justifyContent:"center", cursor: uploading?"wait":"pointer", flexDirection:"column", gap:4, transition:"all 0.2s "+SPR, opacity: uploading?0.6:1 }}>
+            <input ref={inputRef} type="file" accept="image/*" multiple onChange={handleAdd} disabled={uploading} style={{ display:"none" }} />
+            <span style={{ fontSize:28, color:uploading?RED:SUB, lineHeight:1 }}>{uploading?"…":"+"}</span>
+            <span style={{ fontSize:9, color:uploading?RED:SUB, fontFamily:FT, letterSpacing:1, fontWeight:700 }}>{uploading?"WGRYWAM":"DODAJ ZDJĘCIE"}</span>
           </label>
         )}
       </div>
@@ -2665,31 +2707,56 @@ export default function App() {
 
   // Galeria — dodaj zdjęcia
   async function addPhotos(type, itemId, files) {
+    if (!files || !files.length) return;
+    const fileArr = Array.from(files);
+    toast(`Wgrywam ${fileArr.length} ${fileArr.length===1?"zdjęcie":"zdjęć"}...`);
     const uploaded = [];
-    for (const f of Array.from(files)) {
-      const path = `${type}/${itemId}/${Date.now()}-${f.name}`;
-      const url = await uploadFile("galleries", path, f);
-      const table = type==="ride" ? "ride_photos" : "race_photos";
-      const col   = type==="ride" ? "ride_id" : "race_id";
-      const { data: row } = await sb.from(table).insert({ [col]: itemId, url }).select().single();
-      if (row) uploaded.push(row);
+    try {
+      for (const f of fileArr) {
+        const safeName = f.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
+        const path = `${type}/${itemId}/${Date.now()}-${safeName}`;
+        const url = await uploadFile("galleries", path, f);
+        const table = type==="ride" ? "ride_photos" : "race_photos";
+        const col   = type==="ride" ? "ride_id" : "race_id";
+        const { data: row, error } = await sb.from(table).insert({ [col]: itemId, url }).select().single();
+        if (error) throw error;
+        if (row) uploaded.push(row);
+      }
+      setData(d => ({
+        ...d,
+        rides: type==="ride" ? d.rides.map(r => r.id===itemId ? {...r, photos:[...(r.photos||[]),...uploaded]} : r) : d.rides,
+        races: type==="race" ? d.races.map(r => r.id===itemId ? {...r, photos:[...(r.photos||[]),...uploaded]} : r) : d.races,
+      }));
+      toast(`Dodano ${uploaded.length} ${uploaded.length===1?"zdjęcie":"zdjęć"}!`);
+    } catch (e) {
+      console.error("[GALLERY] upload error:", e);
+      const msg = e?.message || "";
+      let hint = "Błąd uploadu zdjęć";
+      if (msg.includes("Bucket not found") || msg.includes("bucket")) hint = "Brak bucketu 'galleries' w Supabase Storage";
+      else if (msg.includes("not allowed") || msg.includes("policy") || msg.includes("RLS")) hint = "Brak uprawnień (RLS) — sprawdź polityki Supabase";
+      else if (msg.includes("relation") || msg.includes("ride_photos") || msg.includes("race_photos")) hint = "Brak tabeli zdjęć w bazie — uruchom update_schema.sql";
+      else if (msg) hint = "Błąd: " + msg.slice(0, 80);
+      toast(hint, "error");
     }
-    setData(d => ({
-      ...d,
-      rides: type==="ride" ? d.rides.map(r => r.id===itemId ? {...r, photos:[...(r.photos||[]),...uploaded]} : r) : d.rides,
-      races: type==="race" ? d.races.map(r => r.id===itemId ? {...r, photos:[...(r.photos||[]),...uploaded]} : r) : d.races,
-    }));
   }
 
   // Galeria — usuń zdjęcie
   async function deletePhoto(type, itemId, photo) {
-    const table = type==="ride" ? "ride_photos" : "race_photos";
-    await sb.from(table).delete().eq("id", photo.id);
-    setData(d => ({
-      ...d,
-      rides: type==="ride" ? d.rides.map(r => r.id===itemId ? {...r, photos:(r.photos||[]).filter(p=>p.id!==photo.id)} : r) : d.rides,
-      races: type==="race" ? d.races.map(r => r.id===itemId ? {...r, photos:(r.photos||[]).filter(p=>p.id!==photo.id)} : r) : d.races,
-    }));
+    if (!window.confirm("Usunąć to zdjęcie?")) return;
+    try {
+      const table = type==="ride" ? "ride_photos" : "race_photos";
+      const { error } = await sb.from(table).delete().eq("id", photo.id);
+      if (error) throw error;
+      setData(d => ({
+        ...d,
+        rides: type==="ride" ? d.rides.map(r => r.id===itemId ? {...r, photos:(r.photos||[]).filter(p=>p.id!==photo.id)} : r) : d.rides,
+        races: type==="race" ? d.races.map(r => r.id===itemId ? {...r, photos:(r.photos||[]).filter(p=>p.id!==photo.id)} : r) : d.races,
+      }));
+      toast("Zdjęcie usunięte");
+    } catch (e) {
+      console.error("[GALLERY] delete error:", e);
+      toast("Błąd usuwania: " + (e?.message || "nieznany"), "error");
+    }
   }
 
   // Załaduj zdjęcia dla konkretnego ride/race (leniwie)
