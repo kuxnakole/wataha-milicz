@@ -830,9 +830,11 @@ function AuthScreen({ users, onLogin, onRegister, onGuest, site: authSite }) {
 // ═══════════════════════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════════════════════
-function HomeScreen({ data }) {
+function HomeScreen({ data, currentUser, rsvpRide }) {
   const { site, rides, sponsors, races } = data;
-  const upcoming = rides.find(r => r.status === "upcoming");
+  const today = new Date().toISOString().slice(0,10);
+  const upcoming = rides.find(r => r.status === "upcoming" && r.date >= today) || rides.find(r => r.status === "upcoming");
+  const liveUpcoming = upcoming ? (data.rides.find(r => r.id === upcoming.id) || upcoming) : null;
   const team = data.users.filter(u => u.inTeam);
   const totalKm = rides.filter(r => r.status === "done").reduce((s, r) => s + r.km, 0);
   const doneRides = rides.filter(r => r.status === "done").length;
@@ -875,7 +877,7 @@ function HomeScreen({ data }) {
         ))}
       </div>
 
-      {upcoming && (
+      {upcoming && liveUpcoming && (
         <>
           <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZACA USTAWKA</div>
           <Card accent sx={{ marginBottom:18 }}>
@@ -890,7 +892,25 @@ function HomeScreen({ data }) {
                 <span>📏 {upcoming.km} km · ⛰ {upcoming.elev} m · ⚡ {upcoming.avg} km/h</span>
                 {upcoming.meet && <span>📍 {upcoming.meet}</span>}
               </div>
-              {upcoming.desc && <p style={{ color:SUB, fontSize:13, margin:0, lineHeight:1.65 }}>{upcoming.desc}</p>}
+              {upcoming.desc && <p style={{ color:SUB, fontSize:13, margin:"0 0 8px", lineHeight:1.65 }}>{upcoming.desc}</p>}
+              {/* RSVP — jadę/nie jadę */}
+              <RsvpBtn itemId={upcoming.id} user={currentUser} attendees={liveUpcoming.attendees} onToggle={rsvpRide} upcoming />
+              {/* Kto się zapisał */}
+              {(liveUpcoming.attendees||[]).filter(a=>a.status==="going").length > 0 && (
+                <div style={{ marginTop:12, paddingTop:12, borderTop:"1px solid "+BDR }}>
+                  <div style={{ fontFamily:FT, fontSize:9, color:MUTED, letterSpacing:2, textTransform:"uppercase", marginBottom:8 }}>
+                    ZAPISANI ({liveUpcoming.attendees.filter(a=>a.status==="going").length})
+                  </div>
+                  <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+                    {liveUpcoming.attendees.filter(a=>a.status==="going").map(a => (
+                      <div key={a.user_id} style={{ display:"flex", alignItems:"center", gap:5, background:SURF2, borderRadius:20, padding:"3px 10px 3px 3px", border:"1px solid "+BDR }}>
+                        <Avatar user={{ name:a.profiles?.name||"?", avatar:a.profiles?.avatar_url }} size={20} />
+                        <span style={{ fontSize:11, color:TEXT }}>{a.profiles?.name||"Zawodnik"}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </Card>
         </>
@@ -1351,6 +1371,22 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
           )}
           {detail.status === "upcoming" && (
             <RsvpBtn itemId={detail.id} user={currentUser} attendees={liveRide.attendees} onToggle={rsvpRide} upcoming />
+          )}
+          {/* Kto się zapisał — dla nadchodzących */}
+          {detail.status === "upcoming" && (liveRide.attendees||[]).filter(a=>a.status==="going").length > 0 && (
+            <div style={{ background:SURF, borderRadius:13, padding:"14px 16px", marginBottom:14, marginTop:4, border:"1px solid "+BDR }}>
+              <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>
+                JADĄ ({liveRide.attendees.filter(a=>a.status==="going").length})
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                {liveRide.attendees.filter(a=>a.status==="going").map(a => (
+                  <div key={a.user_id} style={{ display:"flex", alignItems:"center", gap:7, background:SURF2, borderRadius:20, padding:"4px 11px 4px 4px", border:"1px solid "+BDR }}>
+                    <Avatar user={{ name:a.profiles?.name||"?", avatar:a.profiles?.avatar_url }} size={22} />
+                    <span style={{ fontSize:11, color:TEXT }}>{a.profiles?.name||"Zawodnik"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
           {detail.gpxUrl && <GpxMap url={detail.gpxUrl} />}
           {detail.gpxText && !detail.gpxUrl && <GpxMap gpxText={detail.gpxText} fileName={detail.gpx} />}
