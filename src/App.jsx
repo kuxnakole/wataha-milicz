@@ -29,6 +29,26 @@ async function uploadFile(bucket, path, file) {
   return publicUrl;
 }
 
+// Kompresja zdjęcia przez Canvas — max 1920px, JPEG 78%
+// Zmniejsza typowe 4-8MB foto z telefonu do ~200-400KB
+async function compressImage(file, maxW = 1920, quality = 0.78) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      let w = img.width, h = img.height;
+      if (w > maxW) { h = Math.round(h * maxW / w); w = maxW; }
+      const canvas = document.createElement("canvas");
+      canvas.width = w; canvas.height = h;
+      canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+      URL.revokeObjectURL(url);
+      canvas.toBlob(blob => resolve(blob || file), "image/jpeg", quality);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); resolve(file); };
+    img.src = url;
+  });
+}
+
 async function b64ToStorage(bucket, path, b64) {
   if (!b64 || !b64.startsWith("data:")) return b64; // już URL lub pusty
   const res  = await fetch(b64);
@@ -1465,11 +1485,13 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
   const upcoming = racesWithStatus.filter(r => r.effectiveStatus === "upcoming").sort((a,b) => a.date.localeCompare(b.date));
   const done     = racesWithStatus.filter(r => r.effectiveStatus === "done").sort((a,b) => b.date.localeCompare(a.date));
 
+  // Załaduj zdjęcia dla zakończonych startów (raz przy mount)
+  useEffect(() => {
+    done.forEach(r => { if (!r.photos) loadPhotos("race", r.id); });
+  }, []); // eslint-disable-line
+
   function RaceCard({ r }) {
     const es = r.effectiveStatus || r.status;
-    useEffect(() => {
-      if (es !== "upcoming") loadPhotos("race", r.id);
-    }, [r.id, es]);
     return (
       <Card accent={es === "upcoming"} sx={{ marginBottom:13 }}>
         {es === "upcoming" && (
@@ -2723,13 +2745,14 @@ export default function App() {
   async function addPhotos(type, itemId, files) {
     if (!files || !files.length) return;
     const fileArr = Array.from(files);
-    toast(`Wgrywam ${fileArr.length} ${fileArr.length===1?"zdjęcie":"zdjęć"}...`);
+    toast(`Kompresuję i wgrywam ${fileArr.length} ${fileArr.length===1?"zdjęcie":"zdjęć"}...`);
     const uploaded = [];
     try {
       for (const f of fileArr) {
         const safeName = f.name.replace(/[^a-zA-Z0-9.\-_]/g, "_");
-        const path = `${type}/${itemId}/${Date.now()}-${safeName}`;
-        const url = await uploadFile("galleries", path, f);
+        const path = `${type}/${itemId}/${Date.now()}-${safeName.replace(/\.[^.]+$/, "")}.jpg`;
+        const compressed = await compressImage(f);
+        const url = await uploadFile("galleries", path, compressed);
         const table = type==="ride" ? "ride_photos" : "race_photos";
         const col   = type==="ride" ? "ride_id" : "race_id";
         const { data: row, error } = await sb.from(table).insert({ [col]: itemId, url }).select().single();
