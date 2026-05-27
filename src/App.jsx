@@ -1071,7 +1071,7 @@ function GpxMap({ url, gpxText: gpxTextProp, fileName }) {
 // ═══════════════════════════════════════════════════════════════
 // RIDES SCREEN
 // ═══════════════════════════════════════════════════════════════
-function RidesScreen({ data, setData, currentUser, toast }) {
+function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, deletePhoto }) {
   const [detail, setDetail] = useState(null);
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -1372,7 +1372,7 @@ function RidesScreen({ data, setData, currentUser, toast }) {
 // ═══════════════════════════════════════════════════════════════
 // RACES SCREEN
 // ═══════════════════════════════════════════════════════════════
-function RacesScreen({ data, setData, currentUser, toast }) {
+function RacesScreen({ data, setData, currentUser, toast, rsvpRace }) {
   const [showForm,  setShowForm]  = useState(false);
   const [editRace,  setEditRace]  = useState(null);
   const [resRaceId, setResRaceId] = useState(null);
