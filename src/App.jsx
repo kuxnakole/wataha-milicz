@@ -270,10 +270,10 @@ function rideToDB(r) {
   return { id:r.id, ride_num:r.rideNum||0, title:r.title, date:r.date, time:r.time, km:r.km||0, elev:r.elev||0, avg:r.avg||"", description:r.desc||"", gpx:r.gpx||"", gpx_text:r.gpxText||"", gpx_url:r.gpxUrl||"", img:(r.img&&r.img!==WOLF_BG)?r.img:"", status:r.status, sent:r.sent||false, meet:r.meet||"" };
 }
 function raceFromDB(r) {
-  return { id:r.id, name:r.name, sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||null, results:(r.race_results||[]).map(x=>({ uid:x.uid||"", name:x.name, cat:x.cat||"", dist:x.dist||"", place:x.place||null, medal:x.medal||null, _rid:x.id })) };
+  return { id:r.id, name:r.name, race_type:r.race_type||"wyścig", sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||null, results:(r.race_results||[]).map(x=>({ uid:x.uid||"", name:x.name, cat:x.cat||"", dist:x.dist||"", place:x.place||null, medal:x.medal||null, _rid:x.id })) };
 }
 function raceToDB(r) {
-  return { id:r.id, name:r.name, sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||"" };
+  return { id:r.id, name:r.name, race_type:r.race_type||"wyścig", sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||"" };
 }
 function siteFromDB(rows) {
   const s = {}; (rows||[]).forEach(r => { s[r.key] = r.value; }); return { ...INIT_SITE, ...s };
@@ -1149,6 +1149,29 @@ function RidesScreen({ data, setData, currentUser, toast }) {
       });
       await sb.from("rides").insert(rideToDB(nr));
       await sb.from("notifications").insert({ id:"n"+Date.now(), type:"ride", title:"Nowy Coffee Ride!", body:nr.title+" ("+rideId+") — "+nr.date+" godz. "+nr.time, time_label:"teraz", read_by:[] });
+
+      // Webhook do Make.com — automatyzacja posta na FB + grafika
+      if (data.site.webhookUrl) {
+        fetch(data.site.webhookUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type:    "new_coffee_ride",
+            id:      rideId,
+            title:   nr.title,
+            date:    nr.date,
+            time:    nr.time,
+            km:      nr.km,
+            elev:    nr.elev,
+            avg:     nr.avg,
+            meet:    nr.meet,
+            desc:    nr.desc,
+            // Gotowy tekst posta na Facebook
+            fb_text: `☕ ${nr.title}\n\n📅 ${nr.date} godz. ${nr.time}\n📍 Zbiórka: ${nr.meet}\n🚴 Dystans: ${nr.km} km | Przewyższenie: ${nr.elev} m | Tempo: ${nr.avg} km/h\n\n${nr.desc || ""}\n\n#WatahaMilicz #CoffeeRide #Kolarstwo #MiliczBikeCollective`,
+          }),
+        }).catch(e => console.warn("Webhook ride:", e));
+      }
+
       toast("Coffee Ride " + rideId + " dodany!");
     }
     setShowForm(false);
@@ -1303,8 +1326,27 @@ function RidesScreen({ data, setData, currentUser, toast }) {
               <p style={{ color:TEXT, fontSize:13, lineHeight:1.7, margin:0 }}>{detail.desc}</p>
             </Card>
           )}
+          <RsvpBtn itemId={detail.id} user={currentUser} attendees={detail.attendees} onToggle={rsvpRide} />
           {detail.gpxUrl && <GpxMap url={detail.gpxUrl} />}
           {detail.gpxText && !detail.gpxUrl && <GpxMap gpxText={detail.gpxText} fileName={detail.gpx} />}
+          <GalleryGrid photos={detail.photos} isAdmin={isAdmin}
+            onAdd={e => addPhotos("ride", detail.id, e.target.files)}
+            onDelete={p => deletePhoto("ride", detail.id, p)} />
+          {detail.status === "done" && detail.attendees?.filter(a=>a.status==="going").length > 0 && (
+            <div style={{ background:SURF, borderRadius:13, padding:"14px 16px", marginBottom:14, border:"1px solid "+BDR }}>
+              <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>
+                UCZESTNICY ({detail.attendees.filter(a=>a.status==="going").length})
+              </div>
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
+                {detail.attendees.filter(a=>a.status==="going").map(a => (
+                  <div key={a.user_id} style={{ display:"flex", alignItems:"center", gap:7, background:SURF2, borderRadius:20, padding:"4px 11px 4px 4px" }}>
+                    <Avatar user={{ name:a.profiles?.name||"?", avatar:a.profiles?.avatar_url }} size={22} />
+                    <span style={{ fontSize:11, color:TEXT }}>{a.profiles?.name||"Zawodnik"}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {detail.gpx && !detail.gpxUrl && !detail.gpxText && (
             <div style={{ background:SURF2, borderRadius:11, padding:"11px 15px", display:"flex", alignItems:"center", gap:10, color:SUB, fontSize:12, marginBottom:14, border:"1px solid " + BDR }}>
               <IMap />
@@ -1450,6 +1492,7 @@ function RacesScreen({ data, setData, currentUser, toast }) {
             </div>
             <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0, marginLeft:8 }}>
               {es === "upcoming" && <Pill label="Nadchodzi" />}
+              <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} />
               {isAdmin && (
                 <div style={{ display:"flex", gap:5 }}>
                   <button onClick={() => toggleRaceStatus(r)} title={es === "upcoming" ? "Zakończ" : "Przywróć"}
@@ -1895,6 +1938,132 @@ function SponsorsScreen({ data, setData, currentUser, toast }) {
 // ═══════════════════════════════════════════════════════════════
 // ABOUT SCREEN
 // ═══════════════════════════════════════════════════════════════
+
+// ── RSVP BUTTON ─────────────────────────────────────────────────
+function RsvpBtn({ itemId, user, attendees, onToggle }) {
+  if (!user) return null;
+  const mine  = (attendees||[]).find(a => a.user_id === user.id);
+  const going = (attendees||[]).filter(a => a.status === "going");
+  const isGoing = mine?.status === "going";
+  const isSet   = !!mine;
+  return (
+    <div style={{ display:"flex", alignItems:"center", gap:10, marginTop:10 }}>
+      <button onClick={() => onToggle(itemId, isGoing ? "not_going" : "going")} className="no-tap"
+        style={{ background: isGoing ? "#34C759" : isSet ? REDD : SURF2,
+          border: isGoing ? "1px solid #34C75966" : isSet ? "1px solid "+REDB : "1px solid "+BDR,
+          color: isGoing ? "#fff" : isSet ? RED : SUB,
+          borderRadius:9, padding:"8px 16px", cursor:"pointer", fontFamily:FT, fontWeight:700, fontSize:11, letterSpacing:0.8 }}>
+        {isGoing ? "✓ JADĘ" : isSet ? "✗ NIE JADĘ" : "+ POTWIERDZAM"}
+      </button>
+      {going.length > 0 && (
+        <span style={{ fontSize:11, color:SUB }}>
+          🚴 {going.length} {going.length===1?"jedzie":going.length<5?"jadą":"jedzie"}
+        </span>
+      )}
+    </div>
+  );
+}
+
+// ── GALLERY GRID ─────────────────────────────────────────────────
+function GalleryGrid({ photos, isAdmin, onAdd, onDelete }) {
+  const [lb, setLb] = useState(null);
+  if (!photos?.length && !isAdmin) return null;
+  return (
+    <div style={{ marginBottom:18 }}>
+      <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>
+        GALERIA {photos?.length > 0 ? `(${photos.length})` : ""}
+      </div>
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:6 }}>
+        {(photos||[]).map((p,i) => (
+          <div key={p.id||i} style={{ position:"relative", borderRadius:9, overflow:"hidden", aspectRatio:"1", cursor:"pointer" }}
+            onClick={() => setLb(i)}>
+            <img src={p.url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            {isAdmin && <button onClick={e=>{e.stopPropagation();onDelete(p);}} className="no-tap"
+              style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.75)", border:"none", borderRadius:"50%", width:22, height:22, color:"#fff", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>}
+          </div>
+        ))}
+        {isAdmin && (
+          <label style={{ borderRadius:9, background:SURF2, border:"1px dashed "+BDR, aspectRatio:"1", display:"flex", alignItems:"center", justifyContent:"center", cursor:"pointer", flexDirection:"column", gap:4 }}>
+            <input type="file" accept="image/*" multiple onChange={onAdd} style={{ display:"none" }} />
+            <span style={{ fontSize:24, color:MUTED }}>+</span>
+            <span style={{ fontSize:9, color:MUTED, fontFamily:FT, letterSpacing:0.8 }}>DODAJ</span>
+          </label>
+        )}
+      </div>
+      {lb !== null && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.93)", zIndex:9000, display:"flex", alignItems:"center", justifyContent:"center" }}
+          onClick={() => setLb(null)}>
+          <button onClick={e=>{e.stopPropagation();setLb(l=>Math.max(0,l-1));}} style={{ position:"absolute", left:16, background:"none", border:"none", color:"#fff", fontSize:40, cursor:"pointer", opacity:0.8 }}>‹</button>
+          <img src={photos[lb]?.url} alt="" style={{ maxWidth:"92vw", maxHeight:"88vh", objectFit:"contain", borderRadius:12 }} />
+          <button onClick={e=>{e.stopPropagation();setLb(l=>Math.min(photos.length-1,l+1));}} style={{ position:"absolute", right:16, background:"none", border:"none", color:"#fff", fontSize:40, cursor:"pointer", opacity:0.8 }}>›</button>
+          <button onClick={()=>setLb(null)} style={{ position:"absolute", top:16, right:16, background:"rgba(0,0,0,0.5)", border:"none", color:"#fff", fontSize:20, cursor:"pointer", borderRadius:"50%", width:36, height:36 }}>✕</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+function StatsScreen({ data }) {
+  const users  = data.users.filter(u => u.inTeam);
+  const rides  = data.rides.filter(r => r.status === "done");
+  const races  = data.races;
+
+  const stats = users.map(u => {
+    const attended  = rides.filter(r => (r.attendees||[]).some(a=>a.user_id===u.id && a.status==="going")).length;
+    const raceStarts= races.reduce((n,r) => n + (r.results||[]).filter(res=>res.uid===u.id||res.name===u.name).length, 0);
+    const medals    = races.reduce((n,r) => n + (r.results||[]).filter(res=>(res.uid===u.id||res.name===u.name)&&res.medal).length, 0);
+    const registered= races.filter(r=>(r.registrations||[]).some(a=>a.user_id===u.id && a.status==="going")).length;
+    return { ...u, attended, raceStarts, medals, registered, score: attended*2+raceStarts*3+medals*5 };
+  }).sort((a,b) => b.score - a.score);
+
+  return (
+    <div>
+      <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:14, fontWeight:600 }}>
+        RANKING AKTYWNOŚCI {new Date().getFullYear()}
+      </div>
+      <div style={{ overflowX:"auto" }}>
+        <table style={{ width:"100%", borderCollapse:"collapse", fontSize:12 }}>
+          <thead>
+            <tr style={{ borderBottom:"1px solid "+BDR }}>
+              {["#","Zawodnik","Ustawki","Starty","Medale","Pkt"].map(h => (
+                <th key={h} style={{ padding:"8px 10px", textAlign:"left", fontFamily:FT, fontSize:10, color:SUB, letterSpacing:1.2, fontWeight:600 }}>{h}</th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {stats.map((u,i) => (
+              <tr key={u.id} style={{ borderBottom:"1px solid "+BDR+"44", background: i===0?GOLD+"11":i===1?"#C0C0C011":i===2?"#CD7F3211":"transparent" }}>
+                <td style={{ padding:"10px", fontFamily:FT, fontWeight:700, color: i===0?GOLD:i===1?"#C0C0C0":i===2?"#CD7F32":MUTED }}>{i+1}</td>
+                <td style={{ padding:"10px" }}>
+                  <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                    <Avatar user={u} size={28} />
+                    <span style={{ fontWeight:600 }}>{u.name}</span>
+                  </div>
+                </td>
+                <td style={{ padding:"10px", textAlign:"center" }}>
+                  <span style={{ fontFamily:FT, fontWeight:700, color:RED }}>{u.attended}</span>
+                  <span style={{ fontSize:10, color:MUTED }}> /{rides.length}</span>
+                </td>
+                <td style={{ padding:"10px", textAlign:"center", fontFamily:FT, fontWeight:700 }}>{u.raceStarts}</td>
+                <td style={{ padding:"10px", textAlign:"center" }}>
+                  {u.medals > 0 ? <span style={{ color:GOLD, fontFamily:FT, fontWeight:700 }}>🏅 {u.medals}</span> : <span style={{ color:MUTED }}>—</span>}
+                </td>
+                <td style={{ padding:"10px", textAlign:"center" }}>
+                  <span style={{ fontFamily:FT, fontWeight:700, fontSize:14, color: i<3?GOLD:TEXT }}>{u.score}</span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      <div style={{ marginTop:10, fontSize:11, color:MUTED, lineHeight:1.6 }}>
+        Punkty: ustawka = 2 pkt · start = 3 pkt · medal = 5 pkt
+      </div>
+    </div>
+  );
+}
+
 function AboutScreen({ data }) {
   const { site, users, rides, races } = data;
   const team = users.filter(u => u.inTeam);
@@ -2228,13 +2397,8 @@ function AdminScreen({ data, setData, toast }) {
       toast("Powiadomienie zapisane");
     }
 
-    // Opcjonalnie — Make.com webhook
-    if (site.webhookUrl) {
-      fetch(site.webhookUrl, {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({ type:"notification", title:nlForm.title, body:nlForm.body }),
-      }).catch(() => {});
-    }
+    // Opcjonalnie — Make.com webhook (tylko dla ustawek, nie powiadomień)
+    // if (site.webhookUrl) { ... }  ← celowo wyłączone
     setNlForm({ title:"", body:"", type:"news" });
   }
 
@@ -2476,6 +2640,71 @@ export default function App() {
     return () => subscription.unsubscribe();
   }, []);
 
+
+  // RSVP — ustawki
+  async function rsvpRide(rideId, status) {
+    if (!user) return;
+    await sb.from("ride_attendees").upsert({ ride_id:rideId, user_id:user.id, status }, { onConflict:"ride_id,user_id" });
+    setData(d => ({ ...d, rides: d.rides.map(r => r.id===rideId ? {
+      ...r, attendees: r.attendees?.find(a=>a.user_id===user.id)
+        ? r.attendees.map(a => a.user_id===user.id ? {...a,status} : a)
+        : [...(r.attendees||[]), { user_id:user.id, status, profiles:{name:user.name, avatar_url:user.avatar} }]
+    } : r) }));
+  }
+
+  // RSVP — zawody
+  async function rsvpRace(raceId, status) {
+    if (!user) return;
+    await sb.from("race_registrations").upsert({ race_id:raceId, user_id:user.id, status }, { onConflict:"race_id,user_id" });
+    setData(d => ({ ...d, races: d.races.map(r => r.id===raceId ? {
+      ...r, registrations: r.registrations?.find(a=>a.user_id===user.id)
+        ? r.registrations.map(a => a.user_id===user.id ? {...a,status} : a)
+        : [...(r.registrations||[]), { user_id:user.id, status, profiles:{name:user.name} }]
+    } : r) }));
+  }
+
+  // Galeria — dodaj zdjęcia
+  async function addPhotos(type, itemId, files) {
+    const uploaded = [];
+    for (const f of Array.from(files)) {
+      const path = `${type}/${itemId}/${Date.now()}-${f.name}`;
+      const url = await uploadFile("galleries", path, f);
+      const table = type==="ride" ? "ride_photos" : "race_photos";
+      const col   = type==="ride" ? "ride_id" : "race_id";
+      const { data: row } = await sb.from(table).insert({ [col]: itemId, url }).select().single();
+      if (row) uploaded.push(row);
+    }
+    setData(d => ({
+      ...d,
+      rides: type==="ride" ? d.rides.map(r => r.id===itemId ? {...r, photos:[...(r.photos||[]),...uploaded]} : r) : d.rides,
+      races: type==="race" ? d.races.map(r => r.id===itemId ? {...r, photos:[...(r.photos||[]),...uploaded]} : r) : d.races,
+    }));
+  }
+
+  // Galeria — usuń zdjęcie
+  async function deletePhoto(type, itemId, photo) {
+    const table = type==="ride" ? "ride_photos" : "race_photos";
+    await sb.from(table).delete().eq("id", photo.id);
+    setData(d => ({
+      ...d,
+      rides: type==="ride" ? d.rides.map(r => r.id===itemId ? {...r, photos:(r.photos||[]).filter(p=>p.id!==photo.id)} : r) : d.rides,
+      races: type==="race" ? d.races.map(r => r.id===itemId ? {...r, photos:(r.photos||[]).filter(p=>p.id!==photo.id)} : r) : d.races,
+    }));
+  }
+
+  // Załaduj zdjęcia dla konkretnego ride/race (leniwie)
+  async function loadPhotos(type, id) {
+    const table = type==="ride" ? "ride_photos" : "race_photos";
+    const col   = type==="ride" ? "ride_id" : "race_id";
+    const { data } = await sb.from(table).select("*").eq(col, id).order("created_at");
+    if (!data) return;
+    setData(d => ({
+      ...d,
+      rides: type==="ride" ? d.rides.map(r => r.id===id ? {...r, photos:data} : r) : d.rides,
+      races: type==="race" ? d.races.map(r => r.id===id ? {...r, photos:data} : r) : d.races,
+    }));
+  }
+
   async function loadProfile(authUser) {
     console.log("[AUTH] loadProfile start:", authUser.id);
     try {
@@ -2520,13 +2749,17 @@ export default function App() {
     // Ładuje dane w tle — nie blokuje UI
     try {
       const uid = authUidRef.current;
-      const [siteRes, ridesRes, racesRes, sponsorsRes, profilesRes] = await Promise.all([
+      const [siteRes, ridesRes, racesRes, sponsorsRes, profilesRes, attRes, regRes] = await Promise.all([
         sb.from("site_settings").select("*"),
         sb.from("rides").select("*").order("date", { ascending:false }),
         sb.from("races").select("*, race_results(*)").order("date", { ascending:false }),
         sb.from("sponsors").select("*"),
         sb.from("profiles").select("*"),
+        sb.from("ride_attendees").select("*, profiles(name,avatar_url)"),
+        sb.from("race_registrations").select("*, profiles(name,avatar_url)"),
       ]);
+      const attMap={}; (attRes.data||[]).forEach(a=>{if(!attMap[a.ride_id])attMap[a.ride_id]=[];attMap[a.ride_id].push(a);});
+      const regMap={}; (regRes.data||[]).forEach(r=>{if(!regMap[r.race_id])regMap[r.race_id]=[];regMap[r.race_id].push(r);});
       let notifsData = [];
       if (uid) {
         const { data: nr } = await sb.from("notifications").select("*").order("created_at", { ascending:false });
@@ -2535,8 +2768,8 @@ export default function App() {
       setData(d => ({
         ...d,
         site:     siteFromDB(siteRes.data),
-        rides:    (ridesRes.data   || []).map(rideFromDB),
-        races:    (racesRes.data   || []).map(raceFromDB),
+        rides:    (ridesRes.data   || []).map(r => ({ ...rideFromDB(r), attendees: attMap[r.id]||[] })),
+        races:    (racesRes.data   || []).map(r => ({ ...raceFromDB(r), registrations: regMap[r.id]||[], race_type: r.race_type||"wyścig" })),
         sponsors: sponsorsRes.data || [],
         notifs:   (notifsData.length > 0 && authUidRef.current) ? notifsData : d.notifs,
         users:    (profilesRes.data || []).map(profileFromDB),
@@ -2649,7 +2882,7 @@ await sb.auth.signOut();
     );
   }
 
-  const pp = { data, setData, currentUser:user, toast };
+  const pp = { data, setData, currentUser:user, toast, isAdmin, rsvpRide, rsvpRace, addPhotos, deletePhoto, loadPhotos };
 
   function renderPage() {
     if (page === "profile" && !user) { setShowAuth(true); return null; }
