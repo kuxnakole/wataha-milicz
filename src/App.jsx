@@ -1071,7 +1071,7 @@ function GpxMap({ url, gpxText: gpxTextProp, fileName }) {
 // ═══════════════════════════════════════════════════════════════
 // RIDES SCREEN
 // ═══════════════════════════════════════════════════════════════
-function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, deletePhoto }) {
+function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, deletePhoto, loadPhotos }) {
   const [detail, setDetail] = useState(null);
   const [editing, setEditing] = useState(null);
   const [showForm, setShowForm] = useState(false);
@@ -1210,7 +1210,7 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
   function RideRow({ r }) {
     const img = r.img || WOLF_BG;
     return (
-      <div onClick={() => setDetail(r)} className="card-hover no-tap" style={{
+      <div onClick={() => { setDetail(r); loadPhotos("ride", r.id); }} className="card-hover no-tap" style={{
         background:SURF, backgroundImage: r.status === "upcoming" ? CARD_GRAD_RED : CARD_GRAD,
         borderRadius:14, border:"1px solid " + (r.status === "upcoming" ? REDB : BDR),
         padding:"14px 16px", marginBottom:11, cursor:"pointer", display:"flex", gap:13, alignItems:"center",
@@ -1374,7 +1374,7 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
 // ═══════════════════════════════════════════════════════════════
 // RACES SCREEN
 // ═══════════════════════════════════════════════════════════════
-function RacesScreen({ data, setData, currentUser, toast, rsvpRace }) {
+function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, deletePhoto, loadPhotos }) {
   const [showForm,  setShowForm]  = useState(false);
   const [editRace,  setEditRace]  = useState(null);
   const [resRaceId, setResRaceId] = useState(null);
@@ -1383,7 +1383,7 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace }) {
   const logoRef = useRef();
   const isAdmin = currentUser && currentUser.role === "admin";
 
-  const emptyR = { name:"", sub:"", date:"", loc:"", logo:null, dists:[{ lbl:"Dystans glowny", km:"" }] };
+  const emptyR = { name:"", sub:"", date:"", loc:"", logo:null, race_type:"wyścig", dists:[{ lbl:"Dystans glowny", km:"" }] };
   const [form, setForm] = useState(emptyR);
   const sf = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -1467,6 +1467,9 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace }) {
 
   function RaceCard({ r }) {
     const es = r.effectiveStatus || r.status;
+    useEffect(() => {
+      if (es !== "upcoming") loadPhotos("race", r.id);
+    }, [r.id, es]);
     return (
       <Card accent={es === "upcoming"} sx={{ marginBottom:13 }}>
         {es === "upcoming" && (
@@ -1608,6 +1611,17 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace }) {
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
             <TInput label="Data" type="date" value={form.date} onChange={sf("date")} />
             <TInput label="Lokalizacja" value={form.loc} onChange={sf("loc")} placeholder="Koźmin Wlkp." />
+          </div>
+          <div style={{ marginBottom:13 }}>
+            <label style={{ display:"block", marginBottom:8, fontSize:10, color:SUB, textTransform:"uppercase", letterSpacing:1.6, fontFamily:FT, fontWeight:600 }}>TYP STARTU</label>
+            <div style={{ display:"flex", gap:8 }}>
+              {[{ v:"wyścig", ico:"🏁", lbl:"Wyścig" }, { v:"rajd", ico:"🚵", lbl:"Rajd" }].map(opt => (
+                <button key={opt.v} onClick={() => setForm(f => ({ ...f, race_type:opt.v }))}
+                  style={{ flex:1, padding:"10px 0", borderRadius:10, border:"1px solid " + (form.race_type===opt.v ? RED : BDR), background: form.race_type===opt.v ? REDD : SURF2, color: form.race_type===opt.v ? RED : SUB, cursor:"pointer", fontFamily:FT, fontWeight:700, fontSize:12, letterSpacing:0.8, transition:"all 0.2s "+SPR }}>
+                  {opt.ico} {opt.lbl}
+                </button>
+              ))}
+            </div>
           </div>
           <div style={{ marginBottom:13 }}>
             <label style={{ display:"block", marginBottom:6, fontSize:10, color:SUB, textTransform:"uppercase", letterSpacing:1.6, fontFamily:FT, fontWeight:600 }}>LOGO ZAWODOW</label>
