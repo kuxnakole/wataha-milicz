@@ -1312,7 +1312,10 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
         </Sheet>
       )}
 
-      {detail && (
+      {detail && (() => {
+        // Czytamy żywe dane z data.rides aby photos/attendees były aktualne po loadPhotos
+        const liveRide = data.rides.find(r => r.id === detail.id) || detail;
+        return (
         <DetailSheet
           heroImage={detail.img || WOLF_BG}
           title={detail.title}
@@ -1347,20 +1350,20 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
             </Card>
           )}
           {detail.status === "upcoming" && (
-            <RsvpBtn itemId={detail.id} user={currentUser} attendees={detail.attendees} onToggle={rsvpRide} upcoming />
+            <RsvpBtn itemId={detail.id} user={currentUser} attendees={liveRide.attendees} onToggle={rsvpRide} upcoming />
           )}
           {detail.gpxUrl && <GpxMap url={detail.gpxUrl} />}
           {detail.gpxText && !detail.gpxUrl && <GpxMap gpxText={detail.gpxText} fileName={detail.gpx} />}
-          <GalleryGrid photos={detail.photos} isAdmin={isAdmin}
+          <GalleryGrid photos={liveRide.photos} isAdmin={isAdmin}
             onAdd={e => addPhotos("ride", detail.id, e.target.files)}
             onDelete={p => deletePhoto("ride", detail.id, p)} />
-          {detail.status === "done" && detail.attendees?.filter(a=>a.status==="going").length > 0 && (
+          {detail.status === "done" && liveRide.attendees?.filter(a=>a.status==="going").length > 0 && (
             <div style={{ background:SURF, borderRadius:13, padding:"14px 16px", marginBottom:14, border:"1px solid "+BDR }}>
               <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>
-                UCZESTNICY ({detail.attendees.filter(a=>a.status==="going").length})
+                UCZESTNICY ({liveRide.attendees.filter(a=>a.status==="going").length})
               </div>
               <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-                {detail.attendees.filter(a=>a.status==="going").map(a => (
+                {liveRide.attendees.filter(a=>a.status==="going").map(a => (
                   <div key={a.user_id} style={{ display:"flex", alignItems:"center", gap:7, background:SURF2, borderRadius:20, padding:"4px 11px 4px 4px" }}>
                     <Avatar user={{ name:a.profiles?.name||"?", avatar:a.profiles?.avatar_url }} size={22} />
                     <span style={{ fontSize:11, color:TEXT }}>{a.profiles?.name||"Zawodnik"}</span>
@@ -1386,7 +1389,8 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
             </div>
           )}
         </DetailSheet>
-      )}
+        );
+      })()}
     </div>
   );
 }
@@ -1587,12 +1591,21 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
               })}
             </>
           )}
-          {/* Galeria zdjęć — dla zakończonych startów */}
-          {es !== "upcoming" && (
-            <div style={{ marginTop:14 }}>
-              <GalleryGrid photos={r.photos} isAdmin={isAdmin}
-                onAdd={e => addPhotos("race", r.id, e.target.files)}
-                onDelete={p => deletePhoto("race", r.id, p)} />
+          {/* Galeria zdjęć — za togglem jak wyniki */}
+          {es !== "upcoming" && (data.races.find(x=>x.id===r.id)?.photos?.length > 0 || isAdmin) && (
+            <div style={{ marginTop:11 }}>
+              <button onClick={() => setExp(e => ({ ...e, [r.id+"_g"]: !e[r.id+"_g"] }))}
+                style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:"0 0 7px 0", textTransform:"uppercase", fontWeight:600 }}>
+                <span style={{ display:"flex", transform: exp[r.id+"_g"] ? "rotate(180deg)" : "none", transition:"transform 0.3s "+SPR }}><IChevD /></span>
+                {exp[r.id+"_g"] ? "Ukryj galerię" : "Galeria (" + (data.races.find(x=>x.id===r.id)?.photos?.length || 0) + ")"}
+              </button>
+              {exp[r.id+"_g"] && (
+                <GalleryGrid
+                  photos={data.races.find(x=>x.id===r.id)?.photos}
+                  isAdmin={isAdmin}
+                  onAdd={e => addPhotos("race", r.id, e.target.files)}
+                  onDelete={p => deletePhoto("race", r.id, p)} />
+              )}
             </div>
           )}
           {isAdmin && (
