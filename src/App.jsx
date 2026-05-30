@@ -294,10 +294,10 @@ function rideToDB(r) {
   return { id:r.id, ride_num:r.rideNum||0, title:r.title, date:r.date, time:r.time, km:r.km||0, elev:r.elev||0, avg:r.avg||"", description:r.desc||"", gpx:r.gpx||"", gpx_text:r.gpxText||"", gpx_url:r.gpxUrl||"", img:(r.img&&r.img!==WOLF_BG)?r.img:"", status:r.status, sent:r.sent||false, meet:r.meet||"" };
 }
 function raceFromDB(r) {
-  return { id:r.id, name:r.name, race_type:r.race_type||"wyścig", sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||null, results:(r.race_results||[]).map(x=>({ uid:x.uid||"", name:x.name, cat:x.cat||"", dist:x.dist||"", place:x.place||null, medal:x.medal||null, _rid:x.id })) };
+  return { id:r.id, name:r.name, race_type:r.race_type||"wyścig", sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||null, signup_url:r.signup_url||"", results:(r.race_results||[]).map(x=>({ uid:x.uid||"", name:x.name, cat:x.cat||"", dist:x.dist||"", place:x.place||null, medal:x.medal||null, _rid:x.id })) };
 }
 function raceToDB(r) {
-  return { id:r.id, name:r.name, race_type:r.race_type||"wyścig", sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||"" };
+  return { id:r.id, name:r.name, race_type:r.race_type||"wyścig", sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||"", signup_url:r.signup_url||"" };
 }
 function siteFromDB(rows) {
   const s = {}; (rows||[]).forEach(r => { s[r.key] = r.value; }); return { ...INIT_SITE, ...s };
@@ -1475,7 +1475,7 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
   const logoRef = useRef();
   const isAdmin = currentUser && currentUser.role === "admin";
 
-  const emptyR = { name:"", sub:"", date:"", loc:"", logo:null, race_type:"wyścig", dists:[{ lbl:"Dystans główny", km:"" }] };
+  const emptyR = { name:"", sub:"", date:"", loc:"", logo:null, race_type:"wyścig", signup_url:"", dists:[{ lbl:"Dystans główny", km:"" }] };
   const [form, setForm] = useState(emptyR);
   const sf = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -1622,6 +1622,36 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
           {es === "upcoming" && (
             <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} upcoming />
           )}
+
+          {/* Link do oficjalnych zapisów — nadchodzące (pomaga SEO: prawdziwy <a href>) */}
+          {es === "upcoming" && r.signup_url && (
+            <a href={r.signup_url} target="_blank" rel="noopener noreferrer"
+              style={{ display:"inline-flex", alignItems:"center", gap:7, marginTop:11, background:REDD, border:"1px solid "+REDB, color:RED, borderRadius:9, padding:"9px 15px", textDecoration:"none", fontFamily:FT, fontWeight:700, fontSize:11, letterSpacing:0.8 }}>
+              🔗 ZAPISZ SIĘ NA ZAWODY
+            </a>
+          )}
+
+          {/* Rozwijana lista zapisanych — nadchodzące */}
+          {es === "upcoming" && (r.registrations||[]).filter(a=>a.status==="going").length > 0 && (
+            <>
+              <button onClick={() => setExp(e => ({ ...e, [r.id+"_reg"]: !e[r.id+"_reg"] }))}
+                style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:0, marginBottom:7, marginTop:13, textTransform:"uppercase", fontWeight:600 }}>
+                <span style={{ display:"flex", transform: exp[r.id+"_reg"] ? "rotate(180deg)" : "none", transition:"transform 0.3s "+SPR }}><IChevD /></span>
+                {exp[r.id+"_reg"] ? "Ukryj zapisanych" : "Zapisani (" + (r.registrations||[]).filter(a=>a.status==="going").length + ")"}
+              </button>
+              {exp[r.id+"_reg"] && (
+                <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:6, paddingTop:4 }}>
+                  {(r.registrations||[]).filter(a=>a.status==="going").map(a => (
+                    <div key={a.user_id} style={{ display:"flex", alignItems:"center", gap:7, background:SURF2, borderRadius:20, padding:"4px 11px 4px 4px", border:"1px solid "+BDR, animation:"fadeUp 0.3s "+SPR }}>
+                      <Avatar user={{ name:a.profiles?.name||"?", avatar:a.profiles?.avatar_url }} size={22} />
+                      <span style={{ fontSize:11, color:TEXT }}>{a.profiles?.name||"Zawodnik"}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+
           {/* Licznik uczestników — dla zakończonych */}
           {es !== "upcoming" && (
             <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} upcoming={false} />
@@ -1726,6 +1756,7 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
               ))}
             </div>
           </div>
+          <TInput label="Link do zapisów (opcjonalnie)" value={form.signup_url} onChange={sf("signup_url")} placeholder="https://elektronicznezapisy.pl/..." />
           <div style={{ marginBottom:13 }}>
             <label style={{ display:"block", marginBottom:6, fontSize:10, color:SUB, textTransform:"uppercase", letterSpacing:1.6, fontFamily:FT, fontWeight:600 }}>LOGO ZAWODOW</label>
             <input ref={logoRef} type="file" accept="image/*" onChange={e => { const f = e.target.files[0]; if (!f) return; const rr = new FileReader(); rr.onload = ev => setForm(x => ({ ...x, logo: ev.target.result })); rr.readAsDataURL(f); }} style={{ display:"none" }} />
