@@ -109,6 +109,9 @@ const GCSS = [
   "@keyframes sheetInFull { from { opacity:0; transform:translateY(24px) scale(0.98); } to { opacity:1; transform:translateY(0) scale(1); } }",
   "@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }",
   "@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }",
+  "@keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }",
+  ".skel { background:linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 37%, rgba(255,255,255,0.04) 63%); background-size:200% 100%; animation:shimmer 1.4s ease-in-out infinite; }",
+  ".img-fade { animation:fadeIn 0.45s ease; }",
   ".fade-stagger > * { animation: fadeUp 0.55s " + SPR + " both; }",
   ".fade-stagger > *:nth-child(1) { animation-delay: 0.04s; }",
   ".fade-stagger > *:nth-child(2) { animation-delay: 0.10s; }",
@@ -222,6 +225,7 @@ const INIT_SITE = {
   logoType:"real",
   logoImage:null,
   heroImage:null,
+  heroVideo:null,
   aboutImage:null,
   facebook:"",
   instagram:"",
@@ -436,6 +440,30 @@ function Toggle({ on, onChange, label }) {
       </div>
       {label && <span style={{ fontSize:13, color:SUB }}>{label}</span>}
     </label>
+  );
+}
+
+// ── Skeleton shimmer + obrazek z placeholderem ───────────────
+function Skel({ w = "100%", h = 16, r = 8, sx = {} }) {
+  return <div className="skel" style={{ width:w, height:h, borderRadius:r, ...sx }} />;
+}
+
+// Obrazek z shimmer-placeholderem: szary puls dopóki się nie załaduje, potem fade-in
+function SkImg({ src, alt = "", style = {}, radius = 0, opacity = 1 }) {
+  const [loaded, setLoaded] = useState(false);
+  return (
+    <div style={{ position:"relative", overflow:"hidden", borderRadius:radius, ...style }}>
+      {!loaded && <div className="skel" style={{ position:"absolute", inset:0 }} />}
+      {src && (
+        <img
+          src={src}
+          alt={alt}
+          onLoad={() => setLoaded(true)}
+          onError={() => setLoaded(true)}
+          style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", opacity: loaded ? opacity : 0, transition:"opacity 0.4s ease" }}
+        />
+      )}
+    </div>
   );
 }
 
@@ -843,10 +871,14 @@ function HomeScreen({ data, currentUser, rsvpRide }) {
 
   return (
     <div className="fade-stagger">
-      <div style={{ position:"relative", borderRadius:20, overflow:"hidden", marginBottom:18, minHeight:230, display:"flex", flexDirection:"column", justifyContent:"flex-end", background: site.heroImage ? "none" : HERO_GRAD, border:"1px solid " + REDB, boxShadow:"0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,0,38,0.10)" }}>
-        {site.heroImage && <img src={site.heroImage} alt="" style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity:0.92 }} />}
+      <div style={{ position:"relative", borderRadius:20, overflow:"hidden", marginBottom:18, minHeight:230, display:"flex", flexDirection:"column", justifyContent:"flex-end", background: (site.heroImage || site.heroVideo) ? "none" : HERO_GRAD, border:"1px solid " + REDB, boxShadow:"0 16px 40px rgba(0,0,0,0.45), 0 0 0 1px rgba(255,0,38,0.10)" }}>
+        {site.heroVideo
+          ? <video src={site.heroVideo} autoPlay loop muted playsInline preload="auto"
+              style={{ position:"absolute", inset:0, width:"100%", height:"100%", objectFit:"cover", opacity:0.92 }} />
+          : site.heroImage && <SkImg src={site.heroImage} style={{ position:"absolute", inset:0 }} opacity={0.92} />
+        }
         <div style={{ position:"absolute", inset:0, background:"linear-gradient(to top,rgba(8,8,10,0.97) 22%,rgba(8,8,10,0.20) 100%)" }} />
-        {!site.heroImage && (
+        {!site.heroImage && !site.heroVideo && (
           <>
             <div style={{ position:"absolute", inset:0, display:"flex", alignItems:"center", justifyContent:"center", opacity:0.05 }}>
               <WolfPaw size={280} />
@@ -881,7 +913,7 @@ function HomeScreen({ data, currentUser, rsvpRide }) {
         <>
           <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZĄCA USTAWKA</div>
           <Card accent sx={{ marginBottom:18 }}>
-            {upcoming.img && <img src={upcoming.img} alt="" style={{ width:"100%", height:160, objectFit:"cover" }} />}
+            {upcoming.img && <SkImg src={upcoming.img} style={{ width:"100%", height:160 }} />}
             <div style={{ padding:"15px 18px" }}>
               <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:10 }}>
                 <div style={{ fontFamily:FT, fontSize:19, fontWeight:700, letterSpacing:0.8, flex:1, textTransform:"uppercase" }}>{upcoming.title}</div>
@@ -1257,7 +1289,7 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
         boxShadow:"0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.40)",
       }}>
         <div style={{ width:60, height:60, borderRadius:10, overflow:"hidden", flexShrink:0, position:"relative", boxShadow: r.status === "upcoming" ? "0 0 16px " + REDG : "none" }}>
-          <img src={img} alt="" style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+          <SkImg src={img} style={{ width:"100%", height:"100%" }} />
           {r.status === "upcoming" && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg, rgba(255,0,38,0.18) 0%, transparent 100%)" }} />}
         </div>
         <div style={{ flex:1, minWidth:0 }}>
@@ -1538,7 +1570,7 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
           <div style={{ height:96, background:HERO_GRAD, display:"flex", alignItems:"center", justifyContent:"center", gap:14, position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at center, rgba(255,0,38,0.18) 0%, transparent 70%)" }} />
             {r.logo
-              ? <img src={r.logo} alt="" style={{ width:60, height:60, borderRadius:12, objectFit:"cover", border:"2px solid " + REDB, boxShadow:"0 0 20px " + REDG, position:"relative" }} />
+              ? <SkImg src={r.logo} radius={12} style={{ width:60, height:60, border:"2px solid " + REDB, boxShadow:"0 0 20px " + REDG, position:"relative", flexShrink:0 }} />
               : <span style={{ fontSize:34, position:"relative" }}>🏁</span>}
             <div style={{ textAlign:"center", position:"relative" }}>
               <div style={{ fontFamily:FT, fontWeight:700, fontSize:13, letterSpacing:2, color:TEXT, textTransform:"uppercase" }}>{r.name}</div>
@@ -1551,7 +1583,7 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
         <div style={{ padding:"14px 16px" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:9, gap:11 }}>
             {r.status !== "upcoming" && r.logo && (
-              <img src={r.logo} alt="" style={{ width:46, height:46, borderRadius:10, objectFit:"cover", flexShrink:0, border:"1px solid " + BDR }} />
+              <SkImg src={r.logo} radius={10} style={{ width:46, height:46, flexShrink:0, border:"1px solid " + BDR }} />
             )}
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ fontFamily:FT, fontSize:16, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", wordBreak:"break-word" }}>{r.name}</div>
@@ -1787,7 +1819,7 @@ function ResultsScreen({ data }) {
         <Card key={r.id} sx={{ marginBottom:13 }}>
           <button onClick={() => setExp(e => ({ ...e, [r.id]:!e[r.id] }))}
             style={{ width:"100%", background:"none", border:"none", padding:"14px 16px", cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, color:TEXT }}>
-            {r.logo && <img src={r.logo} alt="" style={{ width:42, height:42, borderRadius:9, objectFit:"cover", flexShrink:0, border:"1px solid " + BDR }} />}
+            {r.logo && <SkImg src={r.logo} radius={9} style={{ width:42, height:42, flexShrink:0, border:"1px solid " + BDR }} />}
             <div style={{ textAlign:"left", flex:1, minWidth:0 }}>
               <div style={{ fontFamily:FT, fontSize:15, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase" }}>{r.name}</div>
               <div style={{ color:SUB, fontSize:12, marginTop:3, display:"flex", gap:11, flexWrap:"wrap" }}>
@@ -2104,7 +2136,7 @@ function GalleryGrid({ photos, isAdmin, onAdd, onDelete }) {
         {(photos||[]).map((p,i) => (
           <div key={p.id||i} style={{ position:"relative", borderRadius:9, overflow:"hidden", aspectRatio:"1", cursor:"pointer" }}
             onClick={() => setLb(i)}>
-            <img src={p.url} alt="" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block" }} />
+            <SkImg src={p.url} style={{ width:"100%", height:"100%" }} />
             {isAdmin && <button onClick={e=>{e.stopPropagation();onDelete(p);}} className="no-tap"
               style={{ position:"absolute", top:4, right:4, background:"rgba(0,0,0,0.75)", border:"none", borderRadius:"50%", width:22, height:22, color:"#fff", cursor:"pointer", fontSize:14, display:"flex", alignItems:"center", justifyContent:"center" }}>×</button>}
           </div>
@@ -2203,7 +2235,7 @@ function AboutScreen({ data }) {
       {/* Zdjęcie na stronie O nas — osobne od hero na stronie głównej */}
       {site.aboutImage && (
         <div style={{ borderRadius:16, overflow:"hidden", marginBottom:18, maxHeight:220, position:"relative" }}>
-          <img src={site.aboutImage} alt="Wataha Milicz" style={{ width:"100%", height:"100%", objectFit:"cover", display:"block", maxHeight:220 }} />
+          <SkImg src={site.aboutImage} alt="Wataha Milicz" style={{ width:"100%", maxHeight:220 }} />
           <div style={{ position:"absolute", inset:0, background:"linear-gradient(180deg, transparent 40%, rgba(8,8,10,0.6) 100%)" }} />
         </div>
       )}
@@ -2478,6 +2510,7 @@ function AdminScreen({ data, setData, toast }) {
   const [nlForm, setNlForm] = useState({ title:"", body:"", type:"news" });
   const logoRef = useRef();
   const heroRef = useRef();
+  const heroVidRef = useRef();
   const aboutImgRef = useRef();
   const ssf = k => e => setSite(s => ({ ...s, [k]: e.target.value }));
 
@@ -2500,6 +2533,42 @@ function AdminScreen({ data, setData, toast }) {
       else setSite(s => ({ ...s, [key]: ev.target.result }));
     };
     rr.readAsDataURL(f);
+  }
+
+  const [vidUploading, setVidUploading] = useState(false);
+  async function onVideoLoad(e) {
+    const f = e.target.files[0];
+    if (!f) return;
+    // Limit 25MB — 15s wideo zmieści się spokojnie
+    if (f.size > 25 * 1024 * 1024) {
+      toast("Film za duży (max 25MB). Skróć go lub zmniejsz jakość.", "error");
+      e.target.value = "";
+      return;
+    }
+    setVidUploading(true);
+    toast("Wgrywam film...");
+    try {
+      const path = `hero/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9.\-_]/g, "_")}`;
+      const url = await uploadFile("galleries", path, f);
+      setSite(s => ({ ...s, heroVideo: url }));
+      // zapisz od razu do bazy
+      await sb.from("site_settings").upsert({ key:"heroVideo", value:url }, { onConflict:"key" });
+      setData(d => ({ ...d, site: { ...d.site, heroVideo: url } }));
+      toast("Film hero dodany!");
+    } catch (err) {
+      console.error("[HERO VIDEO]", err);
+      const m = err?.message || "";
+      toast(m.includes("bucket") ? "Brak bucketu 'galleries' w Storage" : "Błąd wgrywania filmu: " + m.slice(0,60), "error");
+    } finally {
+      setVidUploading(false);
+      e.target.value = "";
+    }
+  }
+  async function removeHeroVideo() {
+    setSite(s => ({ ...s, heroVideo: null }));
+    await sb.from("site_settings").upsert({ key:"heroVideo", value:"" }, { onConflict:"key" });
+    setData(d => ({ ...d, site: { ...d.site, heroVideo: null } }));
+    toast("Film usunięty");
   }
 
   async function sendNotif() {
@@ -2568,11 +2637,24 @@ function AdminScreen({ data, setData, toast }) {
               </div>
             )}
             <input ref={heroRef} type="file" accept="image/*" onChange={e => onImgLoad("heroImage", e)} style={{ display:"none" }} />
-            <div style={{ display:"flex", gap:9, alignItems:"center", marginBottom:9 }}>
-              <Btn size="sm" v="ghost" onClick={() => heroRef.current.click()}><IPhoto /> Tło hero</Btn>
-              {site.heroImage && <Btn size="sm" v="danger" onClick={() => setSite(s => ({ ...s, heroImage:null }))}>Usuń tło</Btn>}
+            <div style={{ display:"flex", gap:9, alignItems:"center", marginBottom:9, flexWrap:"wrap" }}>
+              <Btn size="sm" v="ghost" onClick={() => heroRef.current.click()}><IPhoto /> Tło hero (zdjęcie)</Btn>
+              {site.heroImage && <Btn size="sm" v="danger" onClick={() => setSite(s => ({ ...s, heroImage:null }))}>Usuń zdjęcie</Btn>}
             </div>
             {site.heroImage && <img src={site.heroImage} alt="" style={{ width:"100%", borderRadius:11, maxHeight:100, objectFit:"cover" }} />}
+
+            {/* Wideo hero */}
+            <input ref={heroVidRef} type="file" accept="video/*" onChange={onVideoLoad} style={{ display:"none" }} />
+            <div style={{ display:"flex", gap:9, alignItems:"center", margin:"12px 0 8px", flexWrap:"wrap" }}>
+              <Btn size="sm" v="ghost" disabled={vidUploading} onClick={() => heroVidRef.current.click()}>
+                🎬 {vidUploading ? "Wgrywam..." : "Film hero (15s)"}
+              </Btn>
+              {site.heroVideo && <Btn size="sm" v="danger" onClick={removeHeroVideo}>Usuń film</Btn>}
+            </div>
+            {site.heroVideo && <video src={site.heroVideo} muted loop autoPlay playsInline style={{ width:"100%", borderRadius:11, maxHeight:120, objectFit:"cover" }} />}
+            <div style={{ fontSize:11, color:MUTED, marginBottom:4, lineHeight:1.5 }}>
+              Film ma priorytet nad zdjęciem. Max 25MB, format MP4, ~15s. Odtwarza się automatycznie, w pętli, bez dźwięku.
+            </div>
 
             {/* Zdjęcie O nas — osobne */}
             <input ref={aboutImgRef} type="file" accept="image/*" onChange={e => onImgLoad("aboutImage", e)} style={{ display:"none" }} />
