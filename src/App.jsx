@@ -71,8 +71,8 @@ const REDD  = "rgba(255,0,38,0.10)";
 const REDB  = "rgba(255,0,38,0.32)";
 const REDG  = "rgba(255,0,38,0.50)";
 const TEXT  = "#F5F5F7";
-const SUB   = "#86868B";
-const MUTED = "#48484A";
+const SUB   = "#9A9AA1";
+const MUTED = "#6E6E75";
 const GOLD  = "#F5C518";
 const SILV  = "#A8B0BD";
 const BRNZ  = "#B07739";
@@ -879,7 +879,7 @@ function HomeScreen({ data, currentUser, rsvpRide }) {
 
       {upcoming && liveUpcoming && (
         <>
-          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZACA USTAWKA</div>
+          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZĄCA USTAWKA</div>
           <Card accent sx={{ marginBottom:18 }}>
             {upcoming.img && <img src={upcoming.img} alt="" style={{ width:"100%", height:160, objectFit:"cover" }} />}
             <div style={{ padding:"15px 18px" }}>
@@ -1443,7 +1443,7 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
   const logoRef = useRef();
   const isAdmin = currentUser && currentUser.role === "admin";
 
-  const emptyR = { name:"", sub:"", date:"", loc:"", logo:null, race_type:"wyścig", dists:[{ lbl:"Dystans glowny", km:"" }] };
+  const emptyR = { name:"", sub:"", date:"", loc:"", logo:null, race_type:"wyścig", dists:[{ lbl:"Dystans główny", km:"" }] };
   const [form, setForm] = useState(emptyR);
   const sf = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
 
@@ -1742,7 +1742,7 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
             opts={[{ v:"", l:"— wybierz —" }, ...(data.races.find(r => r.id === resRaceId)?.dists || []).map(d => ({ v:d.lbl, l:d.lbl + " (" + d.km + "km)" }))]} />
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
             <TInput label="Miejsce" type="number" value={resForm.place} onChange={srf("place")} placeholder="1" />
-            <TSel label="Medal" value={resForm.medal} onChange={srf("medal")} opts={[{ v:"none", l:"Brak" },{ v:"gold", l:"🥇 Zloto" },{ v:"silver", l:"🥈 Srebro" },{ v:"bronze", l:"🥉 Braz" }]} />
+            <TSel label="Medal" value={resForm.medal} onChange={srf("medal")} opts={[{ v:"none", l:"Brak" },{ v:"gold", l:"🥇 Złoto" },{ v:"silver", l:"🥈 Srebro" },{ v:"bronze", l:"🥉 Brąz" }]} />
           </div>
           <div style={{ display:"flex", gap:11 }}>
             <Btn full onClick={() => saveResult(resRaceId)}>{editResIdx !== null ? "ZAPISZ ZMIANY" : "DODAJ WYNIK"}</Btn>
@@ -1771,7 +1771,7 @@ function ResultsScreen({ data }) {
     <div className="fade-stagger">
       <SHead title="WYNIKI" sub="Nasze osiągnięcia na zawodach" />
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:11, marginBottom:22 }}>
-        {[["🥇","ZLOTO",g,GOLD],["🥈","SREBRO",s,SILV],["🥉","BRAZ",b,BRNZ]].map(([ic,lbl,v,col]) => (
+        {[["🥇","ZŁOTO",g,GOLD],["🥈","SREBRO",s,SILV],["🥉","BRĄZ",b,BRNZ]].map(([ic,lbl,v,col]) => (
           <Card key={lbl} sx={{ padding:"18px 10px", textAlign:"center", position:"relative", overflow:"hidden" }}>
             <div style={{ position:"absolute", top:-15, right:-15, width:60, height:60, background:"radial-gradient(circle, " + col + "33 0%, transparent 70%)", pointerEvents:"none" }} />
             <div style={{ fontSize:26, marginBottom:7, position:"relative" }}>{ic}</div>
