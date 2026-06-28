@@ -858,7 +858,7 @@ function AuthScreen({ users, onLogin, onRegister, onGuest, site: authSite }) {
 // ═══════════════════════════════════════════════════════════════
 // HOME SCREEN
 // ═══════════════════════════════════════════════════════════════
-function HomeScreen({ data, currentUser, rsvpRide }) {
+function HomeScreen({ data, currentUser, rsvpRide, rsvpRace }) {
   const { site, rides, sponsors, races } = data;
   const today = new Date().toISOString().slice(0,10);
   const upcoming = rides.find(r => r.status === "upcoming" && r.date >= today) || rides.find(r => r.status === "upcoming");
@@ -955,31 +955,21 @@ function HomeScreen({ data, currentUser, rsvpRide }) {
       {upcomingRace && (
         <>
           <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZĄCY START</div>
-          <Card accent sx={{ marginBottom:18 }}>
-            {upcomingRace.logo && <SkImg src={upcomingRace.logo} style={{ width:"100%", height:150 }} />}
-            <div style={{ padding:"15px 18px" }}>
-              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8, gap:11 }}>
-                <div style={{ fontFamily:FT, fontSize:18, fontWeight:700, letterSpacing:0.6, flex:1, textTransform:"uppercase", wordBreak:"break-word" }}>{upcomingRace.name}</div>
-                <Pill label={upcomingRace.race_type === "rajd" ? "🚵 RAJD" : "🏁 WYŚCIG"} />
-              </div>
-              {upcomingRace.sub && <div style={{ color:SUB, fontSize:12, marginBottom:8 }}>{upcomingRace.sub}</div>}
-              <div style={{ color:SUB, fontSize:12, display:"flex", flexWrap:"wrap", gap:"4px 16px", marginBottom:10 }}>
-                {upcomingRace.date && <span>📅 {upcomingRace.date}</span>}
-                {upcomingRace.loc && <span>📍 {upcomingRace.loc}</span>}
-              </div>
-              {(upcomingRace.dists || []).length > 0 && (
-                <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:upcomingRace.signup_url ? 12 : 0 }}>
-                  {upcomingRace.dists.map(d => <Pill key={d.lbl} label={d.lbl + ": " + d.km + "km"} color={MUTED} sz={9} />)}
-                </div>
-              )}
-              {upcomingRace.signup_url && (
-                <a href={upcomingRace.signup_url} target="_blank" rel="noopener noreferrer"
-                  style={{ display:"inline-flex", alignItems:"center", gap:7, background:REDD, border:"1px solid "+REDB, color:RED, borderRadius:9, padding:"9px 15px", textDecoration:"none", fontFamily:FT, fontWeight:700, fontSize:11, letterSpacing:0.8 }}>
-                  🔗 ZAPISZ SIĘ NA ZAWODY
-                </a>
-              )}
-            </div>
-          </Card>
+          <RaceCard
+            r={upcomingRace}
+            users={data.users}
+            currentUser={currentUser}
+            rsvpRace={rsvpRace}
+            addPhotos={() => {}}
+            deletePhoto={() => {}}
+            isAdmin={false}
+            onEdit={() => {}}
+            onDelete={() => {}}
+            onToggleStatus={() => {}}
+            onAddResult={() => {}}
+            onEditResult={() => {}}
+            onDeleteResult={() => {}}
+          />
         </>
       )}
 
