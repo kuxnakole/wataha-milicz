@@ -863,6 +863,10 @@ function HomeScreen({ data, currentUser, rsvpRide }) {
   const today = new Date().toISOString().slice(0,10);
   const upcoming = rides.find(r => r.status === "upcoming" && r.date >= today) || rides.find(r => r.status === "upcoming");
   const liveUpcoming = upcoming ? (data.rides.find(r => r.id === upcoming.id) || upcoming) : null;
+  // Najbliższy nadchodzący start (wyścig lub rajd) — najwcześniejsza data
+  const upcomingRace = races
+    .filter(r => (r.status === "upcoming" && (!r.date || r.date >= today)))
+    .sort((a,b) => (a.date||"").localeCompare(b.date||""))[0];
   const team = data.users.filter(u => u.inTeam);
   const totalKm = rides.filter(r => r.status === "done").reduce((s, r) => s + r.km, 0);
   const doneRides = rides.filter(r => r.status === "done").length;
@@ -942,6 +946,37 @@ function HomeScreen({ data, currentUser, rsvpRide }) {
                     ))}
                   </div>
                 </div>
+              )}
+            </div>
+          </Card>
+        </>
+      )}
+
+      {upcomingRace && (
+        <>
+          <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZĄCY START</div>
+          <Card accent sx={{ marginBottom:18 }}>
+            {upcomingRace.logo && <SkImg src={upcomingRace.logo} style={{ width:"100%", height:150 }} />}
+            <div style={{ padding:"15px 18px" }}>
+              <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:8, gap:11 }}>
+                <div style={{ fontFamily:FT, fontSize:18, fontWeight:700, letterSpacing:0.6, flex:1, textTransform:"uppercase", wordBreak:"break-word" }}>{upcomingRace.name}</div>
+                <Pill label={upcomingRace.race_type === "rajd" ? "🚵 RAJD" : "🏁 WYŚCIG"} />
+              </div>
+              {upcomingRace.sub && <div style={{ color:SUB, fontSize:12, marginBottom:8 }}>{upcomingRace.sub}</div>}
+              <div style={{ color:SUB, fontSize:12, display:"flex", flexWrap:"wrap", gap:"4px 16px", marginBottom:10 }}>
+                {upcomingRace.date && <span>📅 {upcomingRace.date}</span>}
+                {upcomingRace.loc && <span>📍 {upcomingRace.loc}</span>}
+              </div>
+              {(upcomingRace.dists || []).length > 0 && (
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:upcomingRace.signup_url ? 12 : 0 }}>
+                  {upcomingRace.dists.map(d => <Pill key={d.lbl} label={d.lbl + ": " + d.km + "km"} color={MUTED} sz={9} />)}
+                </div>
+              )}
+              {upcomingRace.signup_url && (
+                <a href={upcomingRace.signup_url} target="_blank" rel="noopener noreferrer"
+                  style={{ display:"inline-flex", alignItems:"center", gap:7, background:REDD, border:"1px solid "+REDB, color:RED, borderRadius:9, padding:"9px 15px", textDecoration:"none", fontFamily:FT, fontWeight:700, fontSize:11, letterSpacing:0.8 }}>
+                  🔗 ZAPISZ SIĘ NA ZAWODY
+                </a>
               )}
             </div>
           </Card>
@@ -1466,12 +1501,184 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
 // ═══════════════════════════════════════════════════════════════
 // RACES SCREEN
 // ═══════════════════════════════════════════════════════════════
+function RaceCard({ r, users, currentUser, rsvpRace, addPhotos, deletePhoto, isAdmin, onEdit, onDelete, onToggleStatus, onAddResult, onEditResult, onDeleteResult }) {
+  const [showResults, setShowResults] = useState(false);
+  const [showGallery, setShowGallery] = useState(false);
+  const [showReg, setShowReg] = useState(false);
+  const es = r.effectiveStatus || r.status;
+  const MED = { gold:"🥇", silver:"🥈", bronze:"🥉" };
+
+  // Sortowanie po zajętym miejscu (rosnąco, bez miejsca na końcu) — zachowuje oryginalny indeks do edycji/usuwania
+  const sortedResults = (r.results || [])
+    .map((res, idx) => ({ res, idx }))
+    .sort((a, b) => {
+      const pa = a.res.place != null ? a.res.place : 9999;
+      const pb = b.res.place != null ? b.res.place : 9999;
+      return pa - pb;
+    });
+
+  return (
+    <Card accent={es === "upcoming"} sx={{ marginBottom:13 }}>
+      {es === "upcoming" && (
+        <div style={{ height:96, background:HERO_GRAD, display:"flex", alignItems:"center", justifyContent:"center", gap:14, position:"relative", overflow:"hidden" }}>
+          <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at center, rgba(255,0,38,0.18) 0%, transparent 70%)" }} />
+          {r.logo
+            ? <SkImg src={r.logo} radius={12} style={{ width:60, height:60, border:"2px solid " + REDB, boxShadow:"0 0 20px " + REDG, position:"relative", flexShrink:0 }} />
+            : <span style={{ fontSize:34, position:"relative" }}>🏁</span>}
+          <div style={{ textAlign:"center", position:"relative" }}>
+            <div style={{ fontFamily:FT, fontWeight:700, fontSize:13, letterSpacing:2, color:TEXT, textTransform:"uppercase" }}>{r.name}</div>
+            <div style={{ display:"flex", gap:5, flexWrap:"wrap", justifyContent:"center", marginTop:6 }}>
+              {(r.dists || []).map(d => <Pill key={d.lbl} label={d.lbl + " " + d.km + "km"} color={RED} sz={9} />)}
+            </div>
+          </div>
+        </div>
+      )}
+      <div style={{ padding:"14px 16px" }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:9, gap:11 }}>
+          {r.status !== "upcoming" && r.logo && (
+            <SkImg src={r.logo} radius={10} style={{ width:46, height:46, flexShrink:0, border:"1px solid " + BDR }} />
+          )}
+          <div style={{ flex:1, minWidth:0 }}>
+            <div style={{ fontFamily:FT, fontSize:16, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", wordBreak:"break-word" }}>{r.name}</div>
+            {r.sub && <div style={{ color:SUB, fontSize:12, marginTop:2 }}>{r.sub}</div>}
+            <div style={{ display:"flex", gap:6, alignItems:"center", marginTop:6, flexWrap:"wrap" }}>
+              {es === "upcoming" && <Pill label="NADCHODZI" />}
+              {r.race_type && <Pill label={r.race_type === "rajd" ? "🚵 RAJD" : "🏁 WYŚCIG"} color={MUTED} sz={9} />}
+            </div>
+          </div>
+          {isAdmin && (
+            <div style={{ display:"flex", gap:5, flexShrink:0 }}>
+              <button onClick={() => onEdit(r)} title="Edytuj"
+                style={{ background:SURF2, border:"1px solid " + BDR, color:SUB, borderRadius:7, padding:"6px 8px", cursor:"pointer", display:"flex" }}>
+                <IEdit />
+              </button>
+              <button onClick={() => { if (window.confirm("Usunąć ten start?")) onDelete(r.id); }} title="Usuń"
+                style={{ background:REDD, border:"1px solid " + REDB, color:RED, borderRadius:7, padding:"6px 8px", cursor:"pointer", display:"flex" }}>
+                <ITrash />
+              </button>
+            </div>
+          )}
+        </div>
+        <div style={{ display:"flex", gap:14, color:SUB, fontSize:12, flexWrap:"wrap", marginBottom:7 }}>
+          {r.date && <span>📅 {r.date}</span>}
+          {r.loc  && <span>📍 {r.loc}</span>}
+        </div>
+        {r.status !== "upcoming" && (r.dists || []).length > 0 && (
+          <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:9 }}>
+            {r.dists.map(d => <Pill key={d.lbl} label={d.lbl + ": " + d.km + "km"} color={MUTED} sz={9} />)}
+          </div>
+        )}
+
+        {/* RSVP — tylko dla nadchodzących */}
+        {es === "upcoming" && (
+          <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} upcoming />
+        )}
+
+        {/* Link do oficjalnych zapisów — nadchodzące (pomaga SEO: prawdziwy <a href>) */}
+        {es === "upcoming" && r.signup_url && (
+          <a href={r.signup_url} target="_blank" rel="noopener noreferrer"
+            style={{ display:"inline-flex", alignItems:"center", gap:7, marginTop:11, background:REDD, border:"1px solid "+REDB, color:RED, borderRadius:9, padding:"9px 15px", textDecoration:"none", fontFamily:FT, fontWeight:700, fontSize:11, letterSpacing:0.8 }}>
+            🔗 ZAPISZ SIĘ NA ZAWODY
+          </a>
+        )}
+
+        {/* Rozwijana lista zapisanych — nadchodzące (lokalny state — płynnie, bez remountu karty) */}
+        {es === "upcoming" && (r.registrations||[]).filter(a=>a.status==="going").length > 0 && (
+          <>
+            <button onClick={() => setShowReg(v => !v)}
+              style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:0, marginBottom:7, marginTop:13, textTransform:"uppercase", fontWeight:600 }}>
+              <span style={{ display:"flex", transform: showReg ? "rotate(180deg)" : "none", transition:"transform 0.3s "+SPR }}><IChevD /></span>
+              {showReg ? "Ukryj zapisanych" : "Zapisani (" + (r.registrations||[]).filter(a=>a.status==="going").length + ")"}
+            </button>
+            {showReg && (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:6, paddingTop:4 }}>
+                {(r.registrations||[]).filter(a=>a.status==="going").map(a => (
+                  <div key={a.user_id} style={{ display:"flex", alignItems:"center", gap:7, background:SURF2, borderRadius:20, padding:"4px 11px 4px 4px", border:"1px solid "+BDR, animation:"fadeUp 0.3s "+SPR }}>
+                    <Avatar user={{ name:a.profiles?.name||"?", avatar:a.profiles?.avatar_url }} size={22} />
+                    <span style={{ fontSize:11, color:TEXT }}>{a.profiles?.name||"Zawodnik"}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* Licznik uczestników — dla zakończonych */}
+        {es !== "upcoming" && (
+          <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} upcoming={false} />
+        )}
+
+        {/* Wyniki — sortowane po miejscu, lokalny state (płynne rozwijanie) */}
+        {sortedResults.length > 0 && (
+          <>
+            <button onClick={() => setShowResults(v => !v)}
+              style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:0, marginBottom:7, marginTop:11, textTransform:"uppercase", fontWeight:600 }}>
+              <span style={{ display:"flex", transform: showResults ? "rotate(180deg)" : "none", transition:"transform 0.3s " + SPR }}><IChevD /></span>
+              {showResults ? "Ukryj wyniki" : "Wyniki (" + sortedResults.length + ")"}
+            </button>
+            {showResults && sortedResults.map(({ res, idx }) => {
+              const u = res.uid ? users.find(x => x.id === res.uid) : null;
+              return (
+                <div key={idx} style={{ display:"flex", alignItems:"center", gap:11, padding:"9px 0", borderTop:"1px solid " + BDR, animation:"fadeUp 0.3s " + SPR }}>
+                  <div style={{ width:34, height:34, borderRadius:"50%", background:SURF2, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0, border:"1px solid " + BDR }}>
+                    {res.medal ? MED[res.medal] : <span style={{ fontFamily:FT, fontSize:11, color:MUTED, fontWeight:700 }}>{res.place || "–"}</span>}
+                  </div>
+                  {u && <Avatar user={u} size={32} />}
+                  <div style={{ flex:1 }}>
+                    <div style={{ fontWeight:600, fontSize:13 }}>{res.name}</div>
+                    <div style={{ fontSize:11, color:SUB }}>{res.cat}{res.dist ? " · " + res.dist : ""}</div>
+                  </div>
+                  {isAdmin && (
+                    <div style={{ display:"flex", gap:4 }}>
+                      <button onClick={() => onEditResult(res, idx, r.id)}
+                        style={{ background:"none", border:"none", color:SUB, cursor:"pointer", padding:5, display:"flex" }}><IEdit /></button>
+                      <button onClick={() => onDeleteResult(r.id, idx)}
+                        style={{ background:"none", border:"none", color:MUTED, cursor:"pointer", padding:5, display:"flex" }}><ITrash /></button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </>
+        )}
+        {/* Galeria zdjęć — lokalny state (płynne rozwijanie, bez remountu karty) */}
+        {es !== "upcoming" && ((r.photos?.length > 0) || isAdmin) && (
+          <div style={{ marginTop:11 }}>
+            <button onClick={() => setShowGallery(v => !v)}
+              style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:"0 0 7px 0", textTransform:"uppercase", fontWeight:600 }}>
+              <span style={{ display:"flex", transform: showGallery ? "rotate(180deg)" : "none", transition:"transform 0.3s "+SPR }}><IChevD /></span>
+              {showGallery ? "Ukryj galerię" : "Galeria (" + (r.photos?.length || 0) + ")"}
+            </button>
+            {showGallery && (
+              <GalleryGrid
+                photos={r.photos}
+                isAdmin={isAdmin}
+                onAdd={e => addPhotos("race", r.id, e.target.files)}
+                onDelete={p => deletePhoto("race", r.id, p)} />
+            )}
+          </div>
+        )}
+        {isAdmin && (
+          <div style={{ marginTop:11, paddingTop:11, borderTop:"1px solid " + BDR, display:"flex", gap:8, flexWrap:"wrap" }}>
+            <Btn size="sm" v="ghost" onClick={() => onAddResult(r.id)}>
+              <IPlus /> Dodaj wynik
+            </Btn>
+            <button onClick={() => onToggleStatus(r)}
+              style={{ background:es==="upcoming"?REDD:SURF2, border:"1px solid "+(es==="upcoming"?REDB:BDR), color:es==="upcoming"?RED:SUB, borderRadius:7, padding:"6px 12px", cursor:"pointer", fontSize:11, fontFamily:FT, fontWeight:700, letterSpacing:0.7, marginLeft:"auto" }}>
+              {es === "upcoming" ? "✓ ZAKOŃCZ START" : "↩ PRZYWRÓĆ"}
+            </button>
+          </div>
+        )}
+      </div>
+    </Card>
+  );
+}
+
 function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, deletePhoto, loadPhotos }) {
   const [showForm,  setShowForm]  = useState(false);
   const [editRace,  setEditRace]  = useState(null);
   const [resRaceId, setResRaceId] = useState(null);
   const [editResIdx,setEditResIdx]= useState(null);
-  const [exp, setExp] = useState({});
   const logoRef = useRef();
   const isAdmin = currentUser && currentUser.role === "admin";
 
@@ -1551,7 +1758,10 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
     toast("Wynik usunięty");
   }
 
-  const MED = { gold:"🥇", silver:"🥈", bronze:"🥉" };
+  function openEditRace(rc) { setForm({ ...rc, dists: rc.dists || [{ lbl:"", km:"" }] }); setEditRace(rc); setShowForm(true); }
+  function openAddResult(raceId) { setResForm(emptyRes); setEditResIdx(null); setResRaceId(raceId); }
+  function openEditResult(res, idx, raceId) { setResForm({ ...res, medal: res.medal || "none", place: String(res.place || ""), uid: res.uid || "" }); setEditResIdx(idx); setResRaceId(raceId); }
+
   const todayR = new Date().toISOString().slice(0,10);
   const racesWithStatus = data.races.map(r => ({ ...r, effectiveStatus: r.status === "upcoming" && r.date < todayR ? "done" : r.status }));
   const upcoming = racesWithStatus.filter(r => r.effectiveStatus === "upcoming").sort((a,b) => a.date.localeCompare(b.date));
@@ -1562,165 +1772,9 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
     done.forEach(r => { if (!r.photos) loadPhotos("race", r.id); });
   }, []); // eslint-disable-line
 
-  function RaceCard({ r }) {
-    const es = r.effectiveStatus || r.status;
-    return (
-      <Card accent={es === "upcoming"} sx={{ marginBottom:13 }}>
-        {es === "upcoming" && (
-          <div style={{ height:96, background:HERO_GRAD, display:"flex", alignItems:"center", justifyContent:"center", gap:14, position:"relative", overflow:"hidden" }}>
-            <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse at center, rgba(255,0,38,0.18) 0%, transparent 70%)" }} />
-            {r.logo
-              ? <SkImg src={r.logo} radius={12} style={{ width:60, height:60, border:"2px solid " + REDB, boxShadow:"0 0 20px " + REDG, position:"relative", flexShrink:0 }} />
-              : <span style={{ fontSize:34, position:"relative" }}>🏁</span>}
-            <div style={{ textAlign:"center", position:"relative" }}>
-              <div style={{ fontFamily:FT, fontWeight:700, fontSize:13, letterSpacing:2, color:TEXT, textTransform:"uppercase" }}>{r.name}</div>
-              <div style={{ display:"flex", gap:5, flexWrap:"wrap", justifyContent:"center", marginTop:6 }}>
-                {(r.dists || []).map(d => <Pill key={d.lbl} label={d.lbl + " " + d.km + "km"} color={RED} sz={9} />)}
-              </div>
-            </div>
-          </div>
-        )}
-        <div style={{ padding:"14px 16px" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", marginBottom:9, gap:11 }}>
-            {r.status !== "upcoming" && r.logo && (
-              <SkImg src={r.logo} radius={10} style={{ width:46, height:46, flexShrink:0, border:"1px solid " + BDR }} />
-            )}
-            <div style={{ flex:1, minWidth:0 }}>
-              <div style={{ fontFamily:FT, fontSize:16, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", wordBreak:"break-word" }}>{r.name}</div>
-              {r.sub && <div style={{ color:SUB, fontSize:12, marginTop:2 }}>{r.sub}</div>}
-              <div style={{ display:"flex", gap:6, alignItems:"center", marginTop:6, flexWrap:"wrap" }}>
-                {es === "upcoming" && <Pill label="NADCHODZI" />}
-                {r.race_type && <Pill label={r.race_type === "rajd" ? "🚵 RAJD" : "🏁 WYŚCIG"} color={MUTED} sz={9} />}
-              </div>
-            </div>
-            {isAdmin && (
-              <div style={{ display:"flex", gap:5, flexShrink:0 }}>
-                <button onClick={() => { setForm({ ...r, dists: r.dists || [{ lbl:"", km:"" }] }); setEditRace(r); setShowForm(true); }}
-                  title="Edytuj"
-                  style={{ background:SURF2, border:"1px solid " + BDR, color:SUB, borderRadius:7, padding:"6px 8px", cursor:"pointer", display:"flex" }}>
-                  <IEdit />
-                </button>
-                <button onClick={() => { if(window.confirm("Usunąć ten start?")) delRace(r.id); }}
-                  title="Usuń"
-                  style={{ background:REDD, border:"1px solid " + REDB, color:RED, borderRadius:7, padding:"6px 8px", cursor:"pointer", display:"flex" }}>
-                  <ITrash />
-                </button>
-              </div>
-            )}
-          </div>
-          <div style={{ display:"flex", gap:14, color:SUB, fontSize:12, flexWrap:"wrap", marginBottom:7 }}>
-            {r.date && <span>📅 {r.date}</span>}
-            {r.loc  && <span>📍 {r.loc}</span>}
-          </div>
-          {r.status !== "upcoming" && (r.dists || []).length > 0 && (
-            <div style={{ display:"flex", gap:6, flexWrap:"wrap", marginBottom:9 }}>
-              {r.dists.map(d => <Pill key={d.lbl} label={d.lbl + ": " + d.km + "km"} color={MUTED} sz={9} />)}
-            </div>
-          )}
-
-          {/* RSVP — tylko dla nadchodzących */}
-          {es === "upcoming" && (
-            <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} upcoming />
-          )}
-
-          {/* Link do oficjalnych zapisów — nadchodzące (pomaga SEO: prawdziwy <a href>) */}
-          {es === "upcoming" && r.signup_url && (
-            <a href={r.signup_url} target="_blank" rel="noopener noreferrer"
-              style={{ display:"inline-flex", alignItems:"center", gap:7, marginTop:11, background:REDD, border:"1px solid "+REDB, color:RED, borderRadius:9, padding:"9px 15px", textDecoration:"none", fontFamily:FT, fontWeight:700, fontSize:11, letterSpacing:0.8 }}>
-              🔗 ZAPISZ SIĘ NA ZAWODY
-            </a>
-          )}
-
-          {/* Rozwijana lista zapisanych — nadchodzące */}
-          {es === "upcoming" && (r.registrations||[]).filter(a=>a.status==="going").length > 0 && (
-            <>
-              <button onClick={() => setExp(e => ({ ...e, [r.id+"_reg"]: !e[r.id+"_reg"] }))}
-                style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:0, marginBottom:7, marginTop:13, textTransform:"uppercase", fontWeight:600 }}>
-                <span style={{ display:"flex", transform: exp[r.id+"_reg"] ? "rotate(180deg)" : "none", transition:"transform 0.3s "+SPR }}><IChevD /></span>
-                {exp[r.id+"_reg"] ? "Ukryj zapisanych" : "Zapisani (" + (r.registrations||[]).filter(a=>a.status==="going").length + ")"}
-              </button>
-              {exp[r.id+"_reg"] && (
-                <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:6, paddingTop:4 }}>
-                  {(r.registrations||[]).filter(a=>a.status==="going").map(a => (
-                    <div key={a.user_id} style={{ display:"flex", alignItems:"center", gap:7, background:SURF2, borderRadius:20, padding:"4px 11px 4px 4px", border:"1px solid "+BDR, animation:"fadeUp 0.3s "+SPR }}>
-                      <Avatar user={{ name:a.profiles?.name||"?", avatar:a.profiles?.avatar_url }} size={22} />
-                      <span style={{ fontSize:11, color:TEXT }}>{a.profiles?.name||"Zawodnik"}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-
-          {/* Licznik uczestników — dla zakończonych */}
-          {es !== "upcoming" && (
-            <RsvpBtn itemId={r.id} user={currentUser} attendees={r.registrations} onToggle={rsvpRace} upcoming={false} />
-          )}
-
-          {(r.results || []).length > 0 && (
-            <>
-              <button onClick={() => setExp(e => ({ ...e, [r.id]:!e[r.id] }))}
-                style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:0, marginBottom:7, marginTop:11, textTransform:"uppercase", fontWeight:600 }}>
-                <span style={{ display:"flex", transform: exp[r.id] ? "rotate(180deg)" : "none", transition:"transform 0.3s " + SPR }}><IChevD /></span>
-                {exp[r.id] ? "Ukryj wyniki" : "Wyniki (" + r.results.length + ")"}
-              </button>
-              {exp[r.id] && r.results.map((res, i) => {
-                const u = res.uid ? data.users.find(x => x.id === res.uid) : null;
-                return (
-                  <div key={i} style={{ display:"flex", alignItems:"center", gap:11, padding:"9px 0", borderTop:"1px solid " + BDR, animation:"fadeUp 0.3s " + SPR }}>
-                    <div style={{ width:34, height:34, borderRadius:"50%", background:SURF2, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0, border:"1px solid " + BDR }}>
-                      {res.medal ? MED[res.medal] : <span style={{ fontFamily:FT, fontSize:11, color:MUTED, fontWeight:700 }}>{res.place || "–"}</span>}
-                    </div>
-                    {u && <Avatar user={u} size={32} />}
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontWeight:600, fontSize:13 }}>{res.name}</div>
-                      <div style={{ fontSize:11, color:SUB }}>{res.cat}{res.dist ? " · " + res.dist : ""}</div>
-                    </div>
-                    {isAdmin && (
-                      <div style={{ display:"flex", gap:4 }}>
-                        <button onClick={() => { setResForm({ ...res, medal: res.medal || "none", place: String(res.place || ""), uid: res.uid || "" }); setEditResIdx(i); setResRaceId(r.id); }}
-                          style={{ background:"none", border:"none", color:SUB, cursor:"pointer", padding:5, display:"flex" }}><IEdit /></button>
-                        <button onClick={() => delResult(r.id, i)}
-                          style={{ background:"none", border:"none", color:MUTED, cursor:"pointer", padding:5, display:"flex" }}><ITrash /></button>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </>
-          )}
-          {/* Galeria zdjęć — za togglem jak wyniki */}
-          {es !== "upcoming" && (data.races.find(x=>x.id===r.id)?.photos?.length > 0 || isAdmin) && (
-            <div style={{ marginTop:11 }}>
-              <button onClick={() => setExp(e => ({ ...e, [r.id+"_g"]: !e[r.id+"_g"] }))}
-                style={{ background:"none", border:"none", color:RED, cursor:"pointer", fontSize:12, fontFamily:FT, letterSpacing:0.6, display:"flex", alignItems:"center", gap:5, padding:"0 0 7px 0", textTransform:"uppercase", fontWeight:600 }}>
-                <span style={{ display:"flex", transform: exp[r.id+"_g"] ? "rotate(180deg)" : "none", transition:"transform 0.3s "+SPR }}><IChevD /></span>
-                {exp[r.id+"_g"] ? "Ukryj galerię" : "Galeria (" + (data.races.find(x=>x.id===r.id)?.photos?.length || 0) + ")"}
-              </button>
-              {exp[r.id+"_g"] && (
-                <GalleryGrid
-                  photos={data.races.find(x=>x.id===r.id)?.photos}
-                  isAdmin={isAdmin}
-                  onAdd={e => addPhotos("race", r.id, e.target.files)}
-                  onDelete={p => deletePhoto("race", r.id, p)} />
-              )}
-            </div>
-          )}
-          {isAdmin && (
-            <div style={{ marginTop:11, paddingTop:11, borderTop:"1px solid " + BDR, display:"flex", gap:8, flexWrap:"wrap" }}>
-              <Btn size="sm" v="ghost" onClick={() => { setResForm(emptyRes); setEditResIdx(null); setResRaceId(r.id); }}>
-                <IPlus /> Dodaj wynik
-              </Btn>
-              <button onClick={() => toggleRaceStatus(r)}
-                style={{ background:es==="upcoming"?REDD:SURF2, border:"1px solid "+(es==="upcoming"?REDB:BDR), color:es==="upcoming"?RED:SUB, borderRadius:7, padding:"6px 12px", cursor:"pointer", fontSize:11, fontFamily:FT, fontWeight:700, letterSpacing:0.7, marginLeft:"auto" }}>
-                {es === "upcoming" ? "✓ ZAKOŃCZ START" : "↩ PRZYWRÓĆ"}
-              </button>
-            </div>
-          )}
-        </div>
-      </Card>
-    );
-  }
+  const raceCardProps = { users:data.users, currentUser, rsvpRace, addPhotos, deletePhoto, isAdmin,
+    onEdit:openEditRace, onDelete:delRace, onToggleStatus:toggleRaceStatus,
+    onAddResult:openAddResult, onEditResult:openEditResult, onDeleteResult:delResult };
 
   return (
     <div className="fade-stagger">
@@ -1730,12 +1784,12 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
       {upcoming.length > 0 && (
         <>
           <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>NADCHODZĄCE STARTY</div>
-          {upcoming.map(r => <RaceCard key={r.id} r={r} />)}
+          {upcoming.map(r => <RaceCard key={r.id} r={r} {...raceCardProps} />)}
           <div style={{ height:1, background:BDR, margin:"18px 0" }} />
         </>
       )}
       <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2.4, marginBottom:11, textTransform:"uppercase" }}>ZAKOŃCZONE STARTY</div>
-      {done.map(r => <RaceCard key={r.id} r={r} />)}
+      {done.map(r => <RaceCard key={r.id} r={r} {...raceCardProps} />)}
 
       {showForm && (
         <Sheet title={editRace ? "EDYTUJ START" : "NOWY START"} onClose={() => { setShowForm(false); setEditRace(null); setForm(emptyR); }}>
@@ -1822,8 +1876,10 @@ function RacesScreen({ data, setData, currentUser, toast, rsvpRace, addPhotos, d
 // ═══════════════════════════════════════════════════════════════
 function ResultsScreen({ data }) {
   const [exp, setExp] = useState({});
+  // Tylko wyścigi (rajdy zostają widoczne wyłącznie w zakładce Starty)
+  const onlyRaces = data.races.filter(r => (r.race_type || "wyścig") === "wyścig");
   let g = 0, s = 0, b = 0;
-  data.races.forEach(r => (r.results || []).forEach(res => {
+  onlyRaces.forEach(r => (r.results || []).forEach(res => {
     if (res.medal === "gold")   g++;
     if (res.medal === "silver") s++;
     if (res.medal === "bronze") b++;
@@ -1832,7 +1888,7 @@ function ResultsScreen({ data }) {
 
   return (
     <div className="fade-stagger">
-      <SHead title="WYNIKI" sub="Nasze osiągnięcia na zawodach" />
+      <SHead title="WYNIKI" sub="Nasze osiągnięcia na wyścigach" />
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:11, marginBottom:22 }}>
         {[["🥇","ZŁOTO",g,GOLD],["🥈","SREBRO",s,SILV],["🥉","BRĄZ",b,BRNZ]].map(([ic,lbl,v,col]) => (
           <Card key={lbl} sx={{ padding:"18px 10px", textAlign:"center", position:"relative", overflow:"hidden" }}>
@@ -1846,25 +1902,35 @@ function ResultsScreen({ data }) {
         ))}
       </div>
 
-      {data.races.filter(r => (r.results || []).length > 0).map(r => (
+      {onlyRaces.filter(r => (r.results || []).length > 0).map(r => {
+        // Sortowanie po zajętym miejscu (rosnąco, bez miejsca na końcu)
+        const sortedResults = [...(r.results || [])].sort((a, b) => {
+          const pa = a.place != null ? a.place : 9999;
+          const pb = b.place != null ? b.place : 9999;
+          return pa - pb;
+        });
+        return (
         <Card key={r.id} sx={{ marginBottom:13 }}>
           <button onClick={() => setExp(e => ({ ...e, [r.id]:!e[r.id] }))}
             style={{ width:"100%", background:"none", border:"none", padding:"14px 16px", cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:12, color:TEXT }}>
             {r.logo && <SkImg src={r.logo} radius={9} style={{ width:42, height:42, flexShrink:0, border:"1px solid " + BDR }} />}
             <div style={{ textAlign:"left", flex:1, minWidth:0 }}>
-              <div style={{ fontFamily:FT, fontSize:15, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase" }}>{r.name}</div>
+              <div style={{ display:"flex", alignItems:"center", gap:7, flexWrap:"wrap" }}>
+                <div style={{ fontFamily:FT, fontSize:15, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase" }}>{r.name}</div>
+                <Pill label="🏁 WYŚCIG" color={MUTED} sz={9} />
+              </div>
               <div style={{ color:SUB, fontSize:12, marginTop:3, display:"flex", gap:11, flexWrap:"wrap" }}>
                 <span>📅 {r.date}</span>
                 {r.loc && <span>📍 {r.loc}</span>}
-                <span>{(r.results || []).filter(x => x.medal).map(x => MED[x.medal]).join(" ")}</span>
+                <span>{sortedResults.filter(x => x.medal).map(x => MED[x.medal]).join(" ")}</span>
               </div>
             </div>
             <div style={{ display:"flex", alignItems:"center", gap:9, flexShrink:0 }}>
-              <span style={{ color:SUB, fontSize:12 }}>{r.results.length}</span>
+              <span style={{ color:SUB, fontSize:12 }}>{sortedResults.length}</span>
               <span style={{ color:MUTED, display:"flex", transform: exp[r.id] ? "rotate(180deg)" : "none", transition:"transform 0.3s " + SPR }}><IChevD /></span>
             </div>
           </button>
-          {exp[r.id] && r.results.map((res, i) => {
+          {exp[r.id] && sortedResults.map((res, i) => {
             const u = res.uid ? data.users.find(x => x.id === res.uid) : null;
             return (
               <div key={i} style={{ display:"flex", alignItems:"center", gap:13, padding:"11px 16px", borderTop:"1px solid " + BDR, animation:"fadeUp 0.35s " + SPR }}>
@@ -1881,8 +1947,9 @@ function ResultsScreen({ data }) {
             );
           })}
         </Card>
-      ))}
-      {data.races.filter(r => (r.results || []).length > 0).length === 0 && (
+        );
+      })}
+      {onlyRaces.filter(r => (r.results || []).length > 0).length === 0 && (
         <div style={{ color:MUTED, textAlign:"center", padding:"36px 0", fontSize:14 }}>Brak wyników do wyświetlenia</div>
       )}
     </div>
