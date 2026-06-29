@@ -299,6 +299,9 @@ function raceFromDB(r) {
 function raceToDB(r) {
   return { id:r.id, name:r.name, race_type:r.race_type||"wyścig", sub:r.sub||"", date:r.date, loc:r.loc||"", dists:r.dists||[], status:r.status, logo:r.logo||"", signup_url:r.signup_url||"" };
 }
+function personalResultFromDB(r) {
+  return { id:r.id, uid:r.uid, race_name:r.race_name, race_date:r.race_date||"", race_loc:r.race_loc||"", cat:r.cat||"", dist:r.dist||"", place:r.place||null, medal:r.medal||null };
+}
 function siteFromDB(rows) {
   const s = {}; (rows||[]).forEach(r => { s[r.key] = r.value; }); return { ...INIT_SITE, ...s };
 }
@@ -310,7 +313,7 @@ function notifFromDB(n, uid) {
   const dbRead = Array.isArray(n.read_by) && uid ? n.read_by.includes(uid) : false;
   return { id:n.id, type:n.type||"news", title:n.title, body:n.body||"", time:n.time_label||"teraz", read:localRead||dbRead, read_by:Array.isArray(n.read_by)?n.read_by:[] };
 }
-function userMedals(uid, races) {
+function userMedals(uid, races, personalResults = []) {
   let g = 0, s = 0, b = 0;
   races.forEach(r => {
     (r.results || []).forEach(res => {
@@ -320,17 +323,28 @@ function userMedals(uid, races) {
       if (res.medal === "bronze") b++;
     });
   });
+  personalResults.forEach(res => {
+    if (res.uid !== uid) return;
+    if (res.medal === "gold")   g++;
+    if (res.medal === "silver") s++;
+    if (res.medal === "bronze") b++;
+  });
   return { gold:g, silver:s, bronze:b, total:g+s+b };
 }
 
-function userHistory(uid, races) {
+function userHistory(uid, races, personalResults = []) {
   const out = [];
   races.forEach(r => {
     (r.results || []).forEach(res => {
       if (res.uid === uid) {
-        out.push({ race:r.name, date:r.date, place:res.place, medal:res.medal, dist:res.dist });
+        out.push({ race:r.name, date:r.date, place:res.place, medal:res.medal, dist:res.dist, personal:false });
       }
     });
+  });
+  personalResults.forEach(res => {
+    if (res.uid === uid) {
+      out.push({ race:res.race_name, date:res.race_date, place:res.place, medal:res.medal, dist:res.dist, personal:true, _id:res.id, loc:res.race_loc, cat:res.cat });
+    }
   });
   return out.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
 }
@@ -1949,17 +1963,42 @@ function ResultsScreen({ data }) {
 // ═══════════════════════════════════════════════════════════════
 // TEAM SCREEN — full-bleed avatar + glow
 // ═══════════════════════════════════════════════════════════════
-function TeamScreen({ data }) {
+function TeamScreen({ data, setData, toast, isAdmin }) {
   const [sel, setSel] = useState(null);
+  const [prForm, setPrForm] = useState(null); // null=zamknięty, obiekt=formularz otwarty
   const team = data.users.filter(u => u.inTeam);
   const MED = { gold:"🥇", silver:"🥈", bronze:"🥉" };
+  const emptyPR = { race_name:"", race_date:"", race_loc:"", cat:"", dist:"", place:"", medal:"none" };
+
+  async function savePersonalResult(uid) {
+    if (!prForm.race_name) return;
+    const payload = { uid, race_name:prForm.race_name, race_date:prForm.race_date || null, race_loc:prForm.race_loc||"", cat:prForm.cat||"", dist:prForm.dist||"", place:+prForm.place || null, medal: prForm.medal === "none" ? null : prForm.medal };
+    if (prForm._id) {
+      setData(d => ({ ...d, personalResults: d.personalResults.map(x => x.id === prForm._id ? { ...x, ...payload, id:prForm._id } : x) }));
+      await sb.from("personal_results").update(payload).eq("id", prForm._id);
+      toast("Wynik indywidualny zaktualizowany!");
+    } else {
+      const { data: ins, error } = await sb.from("personal_results").insert(payload).select().single();
+      const newId = ins?.id || "pr" + Date.now();
+      setData(d => ({ ...d, personalResults: [...d.personalResults, { ...payload, id:newId }] }));
+      if (error) console.warn("[PERSONAL RESULT]", error);
+      toast("Wynik indywidualny dodany!");
+    }
+    setPrForm(null);
+  }
+
+  async function deletePersonalResult(id) {
+    setData(d => ({ ...d, personalResults: d.personalResults.filter(x => x.id !== id) }));
+    await sb.from("personal_results").delete().eq("id", id);
+    toast("Wynik usunięty");
+  }
 
   return (
     <div className="fade-stagger">
       <SHead title="ZAWODNICY WATAHY" sub="Nasza ekipa" />
       {team.map(u => {
-        const med  = userMedals(u.id, data.races);
-        const hist = userHistory(u.id, data.races);
+        const med  = userMedals(u.id, data.races, data.personalResults);
+        const hist = userHistory(u.id, data.races, data.personalResults);
         const cat  = getCat(u.birthYear);
         return (
           <div key={u.id} onClick={() => setSel(u)} className="card-hover no-tap" style={{
@@ -1996,8 +2035,8 @@ function TeamScreen({ data }) {
       })}
 
       {sel && (() => {
-        const med  = userMedals(sel.id, data.races);
-        const hist = userHistory(sel.id, data.races);
+        const med  = userMedals(sel.id, data.races, data.personalResults);
+        const hist = userHistory(sel.id, data.races, data.personalResults);
         const cat  = getCat(sel.birthYear);
         return (
           <DetailSheet
@@ -2042,18 +2081,56 @@ function TeamScreen({ data }) {
                     <div style={{ width:34, height:34, borderRadius:"50%", background:SURF2, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17, flexShrink:0, border:"1px solid " + BDR }}>
                       {h.medal ? MED[h.medal] : <span style={{ fontFamily:FT, fontSize:11, color:MUTED, fontWeight:700 }}>{h.place || "–"}</span>}
                     </div>
-                    <div>
-                      <div style={{ fontSize:13, fontWeight:600 }}>{h.race}</div>
-                      <div style={{ fontSize:11, color:SUB }}>{h.dist} · {(h.date || "").slice(0, 7)}</div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                        {h.race}
+                        {h.personal && <Pill label="SOLO" color={MUTED} sz={8} />}
+                      </div>
+                      <div style={{ fontSize:11, color:SUB }}>{h.dist}{h.dist && " · "}{(h.date || "").slice(0, 7)}{h.personal && h.loc ? " · " + h.loc : ""}</div>
                     </div>
+                    {isAdmin && h.personal && (
+                      <div style={{ display:"flex", gap:4, flexShrink:0 }}>
+                        <button onClick={() => setPrForm({ _id:h._id, race_name:h.race, race_date:h.date||"", race_loc:h.loc||"", cat:h.cat||"", dist:h.dist||"", place:String(h.place||""), medal:h.medal||"none" })}
+                          style={{ background:"none", border:"none", color:SUB, cursor:"pointer", padding:5, display:"flex" }}><IEdit /></button>
+                        <button onClick={() => { if (window.confirm("Usunąć ten wynik?")) deletePersonalResult(h._id); }}
+                          style={{ background:"none", border:"none", color:MUTED, cursor:"pointer", padding:5, display:"flex" }}><ITrash /></button>
+                      </div>
+                    )}
                   </div>
                 ))}
               </Card>
             )}
             {hist.length === 0 && <div style={{ color:MUTED, fontSize:13, textAlign:"center", padding:"24px 0" }}>Brak startów w historii</div>}
+            {isAdmin && (
+              <Btn full v="ghost" onClick={() => setPrForm({ ...emptyPR })}>
+                <IPlus /> Dodaj wynik z innych zawodów
+              </Btn>
+            )}
           </DetailSheet>
         );
       })()}
+
+      {prForm && sel && (
+        <Sheet title={prForm._id ? "EDYTUJ WYNIK INDYWIDUALNY" : "DODAJ WYNIK INDYWIDUALNY"} onClose={() => setPrForm(null)}>
+          <TInput label="Nazwa zawodów" value={prForm.race_name} onChange={e => setPrForm(f => ({ ...f, race_name:e.target.value }))} placeholder="np. Maraton Wrocławski" />
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
+            <TInput label="Data" type="date" value={prForm.race_date} onChange={e => setPrForm(f => ({ ...f, race_date:e.target.value }))} />
+            <TInput label="Lokalizacja" value={prForm.race_loc} onChange={e => setPrForm(f => ({ ...f, race_loc:e.target.value }))} placeholder="Wrocław" />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
+            <TInput label="Kategoria" value={prForm.cat} onChange={e => setPrForm(f => ({ ...f, cat:e.target.value }))} placeholder="M30+" />
+            <TInput label="Dystans" value={prForm.dist} onChange={e => setPrForm(f => ({ ...f, dist:e.target.value }))} placeholder="42km" />
+          </div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
+            <TInput label="Miejsce" type="number" value={prForm.place} onChange={e => setPrForm(f => ({ ...f, place:e.target.value }))} placeholder="1" />
+            <TSel label="Medal" value={prForm.medal} onChange={e => setPrForm(f => ({ ...f, medal:e.target.value }))} opts={[{ v:"none", l:"Brak" },{ v:"gold", l:"🥇 Złoto" },{ v:"silver", l:"🥈 Srebro" },{ v:"bronze", l:"🥉 Brąz" }]} />
+          </div>
+          <div style={{ display:"flex", gap:11 }}>
+            <Btn full onClick={() => savePersonalResult(sel.id)}>{prForm._id ? "ZAPISZ ZMIANY" : "DODAJ WYNIK"}</Btn>
+            <Btn full v="ghost" onClick={() => setPrForm(null)}>ANULUJ</Btn>
+          </div>
+        </Sheet>
+      )}
     </div>
   );
 }
@@ -2380,7 +2457,7 @@ function ProfileScreen({ data, setData, currentUser, onLogout, toast }) {
 
   const u    = data.users.find(x => x.id === currentUser.id) || currentUser;
   const cat  = getCat(u.birthYear);
-  const med  = userMedals(u.id, data.races);
+  const med  = userMedals(u.id, data.races, data.personalResults);
   const upd  = patch => setData(d => ({ ...d, users: d.users.map(x => x.id === u.id ? { ...x, ...patch } : x) }));
 
   async function handleAvatar(e) {
@@ -3047,7 +3124,7 @@ export default function App() {
   // ── ŁADOWANIE DANYCH Z SUPABASE ───────────────────────────
   const [data, setData] = useState({
     site: INIT_SITE, users: [], rides: getInitRides(),
-    races: INIT_RACES, sponsors: INIT_SPONSORS, notifs: [],
+    races: INIT_RACES, sponsors: INIT_SPONSORS, notifs: [], personalResults: [],
   });
 
   useEffect(() => {
@@ -3059,6 +3136,7 @@ export default function App() {
       .on("postgres_changes", { event:"*", schema:"public", table:"rides" },        () => loadRides())
       .on("postgres_changes", { event:"*", schema:"public", table:"races" },        () => loadRaces())
       .on("postgres_changes", { event:"*", schema:"public", table:"race_results" }, () => loadRaces())
+      .on("postgres_changes", { event:"*", schema:"public", table:"personal_results" }, () => loadPersonalResults())
       .on("postgres_changes", { event:"*", schema:"public", table:"notifications" },() => loadNotifs())
       .on("postgres_changes", { event:"*", schema:"public", table:"sponsors" },     () => loadSponsors())
       .subscribe();
@@ -3072,7 +3150,7 @@ export default function App() {
     // Ładuje dane w tle — nie blokuje UI
     try {
       const uid = authUidRef.current;
-      const [siteRes, ridesRes, racesRes, sponsorsRes, profilesRes, attRes, regRes] = await Promise.all([
+      const [siteRes, ridesRes, racesRes, sponsorsRes, profilesRes, attRes, regRes, prRes] = await Promise.all([
         sb.from("site_settings").select("*"),
         sb.from("rides").select("*").order("date", { ascending:false }),
         sb.from("races").select("*, race_results(*)").order("date", { ascending:false }),
@@ -3080,6 +3158,7 @@ export default function App() {
         sb.from("profiles").select("*"),
         sb.from("ride_attendees").select("*, profiles(name,avatar_url)"),
         sb.from("race_registrations").select("*, profiles(name,avatar_url)"),
+        sb.from("personal_results").select("*"),
       ]);
       const attMap={}; (attRes.data||[]).forEach(a=>{if(!attMap[a.ride_id])attMap[a.ride_id]=[];attMap[a.ride_id].push(a);});
       const regMap={}; (regRes.data||[]).forEach(r=>{if(!regMap[r.race_id])regMap[r.race_id]=[];regMap[r.race_id].push(r);});
@@ -3096,6 +3175,7 @@ export default function App() {
         sponsors: sponsorsRes.data || [],
         notifs:   (notifsData.length > 0 && authUidRef.current) ? notifsData : d.notifs,
         users:    (profilesRes.data || []).map(profileFromDB),
+        personalResults: (prRes.data || []).map(personalResultFromDB),
       }));
     } catch(e) {
       console.warn("loadAllData error:", e);
@@ -3126,6 +3206,7 @@ export default function App() {
 
   async function loadRides()    { const { data: r } = await sb.from("rides").select("*").order("date",{ascending:false}); if(r) setData(d=>({...d, rides:r.map(rideFromDB)})); }
   async function loadRaces()    { const { data: r } = await sb.from("races").select("*, race_results(*)").order("date",{ascending:false}); if(r) setData(d=>({...d, races:r.map(raceFromDB)})); }
+  async function loadPersonalResults() { const { data: r } = await sb.from("personal_results").select("*"); if(r) setData(d=>({...d, personalResults:r.map(personalResultFromDB)})); }
   async function loadSponsors() { const { data: r } = await sb.from("sponsors").select("*"); if(r) setData(d=>({...d, sponsors:r})); }
   async function loadNotifs()   { const uid=authUidRef.current; const { data: r } = await sb.from("notifications").select("*").order("created_at",{ascending:false}); if(r) setData(d=>({...d, notifs:r.map(n=>notifFromDB(n,uid))})); }
 
