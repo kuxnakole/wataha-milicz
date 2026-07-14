@@ -875,7 +875,9 @@ function AuthScreen({ users, onLogin, onRegister, onGuest, site: authSite }) {
 function HomeScreen({ data, currentUser, rsvpRide, rsvpRace }) {
   const { site, rides, sponsors, races } = data;
   const today = new Date().toISOString().slice(0,10);
-  const upcoming = rides.find(r => r.status === "upcoming" && r.date >= today) || rides.find(r => r.status === "upcoming");
+  const upcoming = rides
+    .filter(r => r.status === "upcoming" && (!r.date || r.date >= today))
+    .sort((a,b) => (a.date||"").localeCompare(b.date||""))[0];
   const liveUpcoming = upcoming ? (data.rides.find(r => r.id === upcoming.id) || upcoming) : null;
   // Najbliższy nadchodzący start (wyścig lub rajd) — najwcześniejsza data
   const upcomingRace = races
@@ -1320,21 +1322,22 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
 
   function RideRow({ r }) {
     const img = r.img || WOLF_BG;
+    const isUpc = (r.effectiveStatus || r.status) === "upcoming";
     return (
       <div onClick={() => { setDetail(r); loadPhotos("ride", r.id); }} className="card-hover no-tap" style={{
-        background:SURF, backgroundImage: r.status === "upcoming" ? CARD_GRAD_RED : CARD_GRAD,
-        borderRadius:14, border:"1px solid " + (r.status === "upcoming" ? REDB : BDR),
+        background:SURF, backgroundImage: isUpc ? CARD_GRAD_RED : CARD_GRAD,
+        borderRadius:14, border:"1px solid " + (isUpc ? REDB : BDR),
         padding:"14px 16px", marginBottom:11, cursor:"pointer", display:"flex", gap:13, alignItems:"center",
         boxShadow:"0 1px 0 rgba(255,255,255,0.04) inset, 0 8px 24px rgba(0,0,0,0.40)",
       }}>
-        <div style={{ width:60, height:60, borderRadius:10, overflow:"hidden", flexShrink:0, position:"relative", boxShadow: r.status === "upcoming" ? "0 0 16px " + REDG : "none" }}>
+        <div style={{ width:60, height:60, borderRadius:10, overflow:"hidden", flexShrink:0, position:"relative", boxShadow: isUpc ? "0 0 16px " + REDG : "none" }}>
           <SkImg src={img} style={{ width:"100%", height:"100%" }} />
-          {r.status === "upcoming" && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg, rgba(255,0,38,0.18) 0%, transparent 100%)" }} />}
+          {isUpc && <div style={{ position:"absolute", inset:0, background:"linear-gradient(135deg, rgba(255,0,38,0.18) 0%, transparent 100%)" }} />}
         </div>
         <div style={{ flex:1, minWidth:0 }}>
           <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:5, flexWrap:"wrap" }}>
             <span style={{ fontFamily:FT, fontSize:15, fontWeight:700, letterSpacing:0.5, textTransform:"uppercase" }}>{r.title}</span>
-            {r.status === "upcoming" && <Pill label="NADCHODZI" />}
+            {isUpc && <Pill label="NADCHODZI" />}
             {r.sent && <Pill label="FB✓" color={GRN} />}
           </div>
           <div style={{ display:"flex", gap:6, alignItems:"center", marginBottom:3 }}>
@@ -1406,12 +1409,14 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
       {detail && (() => {
         // Czytamy żywe dane z data.rides aby photos/attendees były aktualne po loadPhotos
         const liveRide = data.rides.find(r => r.id === detail.id) || detail;
+        const todayD = new Date().toISOString().slice(0,10);
+        const detailUpc = detail.status === "upcoming" && (!detail.date || detail.date >= todayD);
         return (
         <DetailSheet
           heroImage={detail.img || WOLF_BG}
           title={detail.title}
           badges={<>
-            {detail.status === "upcoming" && <Pill label="NADCHODZI" />}
+            {detailUpc && <Pill label="NADCHODZI" />}
             {detail.id && detail.id.startsWith("CR-") && <Pill label={detail.id} color={MUTED} sz={9} />}
             {detail.sent && <Pill label="FB✓" color={GRN} />}
           </>}
@@ -1440,11 +1445,11 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
               <p style={{ color:TEXT, fontSize:13, lineHeight:1.7, margin:0 }}>{detail.desc}</p>
             </Card>
           )}
-          {detail.status === "upcoming" && (
+          {detailUpc && (
             <RsvpBtn itemId={detail.id} user={currentUser} attendees={liveRide.attendees} onToggle={rsvpRide} upcoming />
           )}
           {/* Kto się zapisał — dla nadchodzących */}
-          {detail.status === "upcoming" && (liveRide.attendees||[]).filter(a=>a.status==="going").length > 0 && (
+          {detailUpc && (liveRide.attendees||[]).filter(a=>a.status==="going").length > 0 && (
             <div style={{ background:SURF, borderRadius:13, padding:"14px 16px", marginBottom:14, marginTop:4, border:"1px solid "+BDR }}>
               <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>
                 JADĄ ({liveRide.attendees.filter(a=>a.status==="going").length})
@@ -1464,7 +1469,7 @@ function RidesScreen({ data, setData, currentUser, toast, rsvpRide, addPhotos, d
           <GalleryGrid photos={liveRide.photos} isAdmin={isAdmin}
             onAdd={e => addPhotos("ride", detail.id, e.target.files)}
             onDelete={p => deletePhoto("ride", detail.id, p)} />
-          {detail.status === "done" && liveRide.attendees?.filter(a=>a.status==="going").length > 0 && (
+          {!detailUpc && liveRide.attendees?.filter(a=>a.status==="going").length > 0 && (
             <div style={{ background:SURF, borderRadius:13, padding:"14px 16px", marginBottom:14, border:"1px solid "+BDR }}>
               <div style={{ fontFamily:FT, fontSize:10, color:SUB, letterSpacing:2, textTransform:"uppercase", marginBottom:10, fontWeight:600 }}>
                 UCZESTNICY ({liveRide.attendees.filter(a=>a.status==="going").length})
