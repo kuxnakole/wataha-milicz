@@ -181,6 +181,7 @@ const IChevR   = () => <Ico size={16}><polyline points="9 18 15 12 9 6"/></Ico>;
 const IUpload  = () => <Ico><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></Ico>;
 const IPhoto   = () => <Ico><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></Ico>;
 const IMap     = () => <Ico><polygon points="1 6 1 22 8 18 16 22 23 18 23 2 16 6 8 2 1 6"/><line x1="8" y1="2" x2="8" y2="18"/><line x1="16" y1="6" x2="16" y2="22"/></Ico>;
+const ILive    = () => <Ico><path d="M12 21s-7-6.5-7-11a7 7 0 0 1 14 0c0 4.5-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></Ico>;
 const ISend    = () => <Ico><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></Ico>;
 const ILock    = () => <Ico><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></Ico>;
 const IUser    = () => <Ico><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></Ico>;
@@ -2997,10 +2998,14 @@ const BOTTOM_NAV = [
   { id:"about",   Icon: IInfo,   l:"O nas"    },
 ];
 
+// ── LIVE TRACKER (osobna apka na Vercel) ──────────────────────
+const TRACKER_URL = "https://tracker-wataha.vercel.app/";
+
 const DRAWER_NAV = [
   { id:"home",     Icon: IHome,   l:"STRONA GŁÓWNA",    admin:false },
   { id:"rides",    Icon: ICoffee, l:"COFFEE RIDES",     admin:false },
   { id:"races",    Icon: IFlag,   l:"STARTY ZAWODÓW",   admin:false },
+  { id:"tracker",  Icon: ILive,   l:"LIVE TRACKER",     admin:false, external:true, url:TRACKER_URL },
   { id:"results",  Icon: ITrophy, l:"WYNIKI",           admin:false },
   { id:"team",     Icon: IUsers,  l:"ZAWODNICY",        admin:false },
   { id:"training", Icon: IDumbbell, l:"MODUŁ TRENINGOWY", admin:false, training:true },
@@ -3311,7 +3316,11 @@ export default function App() {
 
 
   const toast   = (msg, type = "success") => setToastMsg({ msg, type });
-  const nav     = id => { setPage(id); setMenuOpen(false); window.scrollTo({ top:0, behavior:"smooth" }); };
+  const nav     = id => {
+    const item = DRAWER_NAV.find(n => n.id === id);
+    if (item?.external) { window.open(item.url, "_blank", "noopener,noreferrer"); setMenuOpen(false); return; }
+    setPage(id); setMenuOpen(false); window.scrollTo({ top:0, behavior:"smooth" });
+  };
   const isAdmin = user && user.role === "admin";
   const unread  = (data.notifs || []).filter(n => !n.read).length;
 
