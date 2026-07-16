@@ -170,6 +170,7 @@ const IUsers   = () => <Ico><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0
 const IInfo    = () => <Ico><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></Ico>;
 const IBell    = () => <Ico><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></Ico>;
 const IGear    = () => <Ico><circle cx="12" cy="12" r="3"/><path d="M12 1v3M12 20v3M4.22 4.22l2.12 2.12M17.66 17.66l2.12 2.12M1 12h3M20 12h3M4.22 19.78l2.12-2.12M17.66 6.34l2.12-2.12"/></Ico>;
+const IDumbbell = () => <Ico><path d="M6.5 6.5l11 11M21 21l-1-1M3 3l1 1M18 22l4-4M2 6l4-4M7.5 10.5l-3 3M13.5 4.5l6 6"/></Ico>;
 const IMenu    = () => <Ico><line x1="3" y1="7" x2="21" y2="7"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="17" x2="21" y2="17"/></Ico>;
 const IClose   = () => <Ico strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></Ico>;
 const IPlus    = () => <Ico><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></Ico>;
@@ -306,7 +307,7 @@ function siteFromDB(rows) {
   const s = {}; (rows||[]).forEach(r => { s[r.key] = r.value; }); return { ...INIT_SITE, ...s };
 }
 function profileFromDB(p) {
-  return { id:p.id, email:"", name:p.name||"", role:p.role||"user", inTeam:p.in_team||false, birthYear:p.birth_year||"", avatar:p.avatar_url||null, nr:p.nr!==false, nra:p.nra||false, nn:p.nn!==false };
+  return { id:p.id, email:"", name:p.name||"", role:p.role||"user", inTeam:p.in_team||false, birthYear:p.birth_year||"", avatar:p.avatar_url||null, nr:p.nr!==false, nra:p.nra||false, nn:p.nn!==false, trainingAccess:p.training_access||false };
 }
 function notifFromDB(n, uid) {
   const localRead = getLocalReadNotifs().has(n.id);
@@ -884,8 +885,10 @@ function HomeScreen({ data, currentUser, rsvpRide, rsvpRace }) {
     .filter(r => (r.status === "upcoming" && (!r.date || r.date >= today)))
     .sort((a,b) => (a.date||"").localeCompare(b.date||""))[0];
   const team = data.users.filter(u => u.inTeam);
-  const totalKm = rides.filter(r => r.status === "done").reduce((s, r) => s + r.km, 0);
-  const doneRides = rides.filter(r => r.status === "done").length;
+  // Ustawka liczy się jako odbyta gdy ma status "done" LUB minęła jej data (spójnie z listą)
+  const isRideDone = r => r.status === "done" || (r.status === "upcoming" && r.date && r.date < today);
+  const totalKm = rides.filter(isRideDone).reduce((s, r) => s + (r.km || 0), 0);
+  const doneRides = rides.filter(isRideDone).length;
   const totalMedals = races.reduce((s, r) => s + (r.results || []).filter(x => x.medal).length, 0);
   const TC = { Platinum:GOLD, Gold:SILV, Silver:BRNZ };
 
@@ -2333,9 +2336,42 @@ function GalleryGrid({ photos, isAdmin, onAdd, onDelete }) {
 }
 
 
+function TrainingScreen({ data, currentUser }) {
+  // Podwójne zabezpieczenie — gdyby ktoś obszedł nawigację
+  if (!currentUser?.trainingAccess) {
+    return (
+      <div className="fade-stagger" style={{ textAlign:"center", padding:"60px 20px" }}>
+        <div style={{ fontSize:40, marginBottom:14 }}>🔒</div>
+        <div style={{ color:MUTED, fontSize:14 }}>Brak dostępu do tego modułu.</div>
+      </div>
+    );
+  }
+  return (
+    <div className="fade-stagger">
+      <SHead title="MODUŁ TRENINGOWY" sub="Twój indywidualny plan treningowy" />
+      <Card sx={{ padding:"28px 22px", textAlign:"center", marginBottom:16 }}>
+        <div style={{ fontSize:44, marginBottom:14 }}>🏋️</div>
+        <div style={{ fontFamily:FT, fontSize:19, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", marginBottom:10 }}>W przygotowaniu</div>
+        <p style={{ color:SUB, fontSize:13, lineHeight:1.7, margin:"0 auto", maxWidth:340 }}>
+          Moduł treningowy oparty na AI jest w budowie. Wkrótce będziesz mógł tu ustawić swój profil,
+          dostępne dni treningowe, priorytety i kalendarz startów — a agent wygeneruje dla Ciebie
+          spersonalizowany plan tygodniowy z integracją interval.icu.
+        </p>
+      </Card>
+      <Card accent sx={{ padding:"16px 18px" }}>
+        <div style={{ fontFamily:FT, fontSize:10, color:"#3B82F6", letterSpacing:2, textTransform:"uppercase", marginBottom:8, fontWeight:700 }}>Masz dostęp ✓</div>
+        <p style={{ color:SUB, fontSize:12.5, lineHeight:1.6, margin:0 }}>
+          Twoje konto zostało dodane do modułu treningowego przez administratora. Damy znać, gdy funkcje będą gotowe.
+        </p>
+      </Card>
+    </div>
+  );
+}
+
 function StatsScreen({ data }) {
+  const todayS = new Date().toISOString().slice(0,10);
   const users  = data.users.filter(u => u.inTeam);
-  const rides  = data.rides.filter(r => r.status === "done");
+  const rides  = data.rides.filter(r => r.status === "done" || (r.status === "upcoming" && r.date && r.date < todayS));
   const races  = data.races;
 
   const stats = users.map(u => {
@@ -2413,7 +2449,7 @@ function AboutScreen({ data }) {
       <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11, marginBottom:18 }}>
         {[
           { v: team.length + "+",    l:"CZŁONKÓW",    Icon: IUsers   },
-          { v: rides.filter(r => r.status === "done").length + "+", l:"COFFEE RIDE", Icon: ICoffee },
+          { v: rides.length + "+", l:"COFFEE RIDE", Icon: ICoffee },
           { v: totalMedals + "+",    l:"MEDALI",      Icon: ITrophy  },
           { v: site.founded,         l:"ROK ZAŁOŻENIA", Icon: () => <Ico><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></Ico> },
         ].map(s => (
@@ -2862,6 +2898,11 @@ function AdminScreen({ data, setData, toast }) {
                   style={{ background: u.inTeam ? GRN + "22" : SURF2, border:"1px solid " + (u.inTeam ? GRN : BDR) + "44", color: u.inTeam ? GRN : MUTED, borderRadius:7, padding:"6px 11px", cursor:"pointer", fontSize:10, fontFamily:FT, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6 }}>
                   {u.inTeam ? "W TEAMIE" : "+ DO TEAMU"}
                 </button>
+                <button
+                  onClick={async () => { const newTA = !u.trainingAccess; setData(d => ({ ...d, users: d.users.map(x => x.id === u.id ? { ...x, trainingAccess: newTA } : x) })); await sb.from("profiles").update({ training_access: newTA }).eq("id", u.id); toast(newTA ? "Dostęp do treningu przyznany" : "Dostęp do treningu odebrany"); }}
+                  style={{ background: u.trainingAccess ? "#3B82F6" + "22" : SURF2, border:"1px solid " + (u.trainingAccess ? "#3B82F6" : BDR) + "44", color: u.trainingAccess ? "#3B82F6" : MUTED, borderRadius:7, padding:"6px 11px", cursor:"pointer", fontSize:10, fontFamily:FT, fontWeight:700, textTransform:"uppercase", letterSpacing:0.6 }}>
+                  {u.trainingAccess ? "🏋️ TRENING" : "+ TRENING"}
+                </button>
               </div>
             </Card>
           ))}
@@ -2962,6 +3003,7 @@ const DRAWER_NAV = [
   { id:"races",    Icon: IFlag,   l:"STARTY ZAWODÓW",   admin:false },
   { id:"results",  Icon: ITrophy, l:"WYNIKI",           admin:false },
   { id:"team",     Icon: IUsers,  l:"ZAWODNICY",        admin:false },
+  { id:"training", Icon: IDumbbell, l:"MODUŁ TRENINGOWY", admin:false, training:true },
   { id:"sponsors", Icon: IHand,   l:"SPONSORZY",        admin:false },
   { id:"about",    Icon: IInfo,   l:"O NAS",            admin:false },
   { id:"notifs",   Icon: IBell,   l:"POWIADOMIENIA",    admin:false, loggedIn:true },
@@ -3296,12 +3338,14 @@ await sb.auth.signOut();
   function renderPage() {
     if (page === "profile" && !user) { setShowAuth(true); return null; }
     if (page === "admin"   && !isAdmin) return null;
+    if (page === "training" && !user?.trainingAccess) { setPage("home"); return null; }
     switch (page) {
       case "home":     return <HomeScreen    {...pp} />;
       case "rides":    return <RidesScreen   {...pp} />;
       case "races":    return <RacesScreen   {...pp} />;
       case "results":  return <ResultsScreen {...pp} />;
       case "team":     return <TeamScreen    {...pp} />;
+      case "training": return user?.trainingAccess ? <TrainingScreen {...pp} /> : null;
       case "sponsors": return <SponsorsScreen {...pp} />;
       case "about":    return <AboutScreen   {...pp} />;
       case "notifs":   return <NotifsScreen  {...pp} />;
@@ -3353,7 +3397,7 @@ await sb.auth.signOut();
 
             {/* Nav items */}
             <div style={{ flex:1, padding:"8px 0", overflowY:"auto" }}>
-              {DRAWER_NAV.filter(n => (!n.admin || isAdmin) && (!n.loggedIn || user)).map(n => (
+              {DRAWER_NAV.filter(n => (!n.admin || isAdmin) && (!n.loggedIn || user) && (!n.training || user?.trainingAccess)).map(n => (
                 <button key={n.id} onClick={() => nav(n.id)} className="no-tap" style={{ width:"100%", textAlign:"left", background: page === n.id ? REDD : "transparent", border:"none", borderLeft: page === n.id ? "3px solid " + RED : "3px solid transparent", padding:"13px 20px", cursor:"pointer", color: page === n.id ? RED : SUB, fontFamily:FT, fontWeight:600, fontSize:11, letterSpacing:1.4, display:"flex", alignItems:"center", gap:13, transition:"background 0.22s ease, color 0.22s ease" }}>
                   <span style={{ display:"flex", color: page === n.id ? RED : MUTED, filter: page === n.id ? "drop-shadow(0 0 6px " + REDG + ")" : "none" }}><n.Icon /></span>
                   {n.l}
@@ -3468,7 +3512,7 @@ await sb.auth.signOut();
               <div style={{ flex:1, background:"rgba(0,0,0,0.78)", backdropFilter:"blur(8px)", WebkitBackdropFilter:"blur(8px)" }} />
               <div style={{ width:280, background:"#0E0E11", backgroundImage:CARD_GRAD, borderLeft:"1px solid " + BDHI, height:"100%", overflowY:"auto", display:"flex", flexDirection:"column", boxShadow:"-16px 0 48px rgba(0,0,0,0.6)", animation:"sheetIn 0.4s " + SPR }} onClick={e => e.stopPropagation()}>
                 <div style={{ padding:"70px 0 16px" }}>
-                  {DRAWER_NAV.filter(n => (!n.admin || isAdmin) && (!n.loggedIn || user)).map(n => (
+                  {DRAWER_NAV.filter(n => (!n.admin || isAdmin) && (!n.loggedIn || user) && (!n.training || user?.trainingAccess)).map(n => (
                     <button key={n.id} onClick={() => nav(n.id)} className="no-tap" style={{ width:"100%", textAlign:"left", background: page === n.id ? REDD : "transparent", border:"none", borderLeft: page === n.id ? "3px solid " + RED : "3px solid transparent", padding:"14px 20px", cursor:"pointer", color: page === n.id ? RED : SUB, fontFamily:FT, fontWeight:600, fontSize:12, letterSpacing:1.6, display:"flex", alignItems:"center", gap:12, transition:"background 0.25s ease, color 0.25s ease" }}>
                       <span style={{ display:"flex", color: page === n.id ? RED : MUTED }}><n.Icon /></span>
                       {n.l}
