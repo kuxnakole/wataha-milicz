@@ -2536,7 +2536,7 @@ function TrPlanTab({ userId, tp, toast }) {
     try {
       const res = await fetch(TR_EDGE_URL, {
         method:"POST",
-        headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + SB_KEY, "apikey":SB_KEY },
+        headers:{ "Content-Type":"application/json" },
         body: JSON.stringify({ user_id: userId }),
       });
       const out = await res.json();
