@@ -2338,7 +2338,587 @@ function GalleryGrid({ photos, isAdmin, onAdd, onDelete }) {
 }
 
 
-function TrainingScreen({ data, currentUser }) {
+// ═══════════════════════════════════════════════════════════════
+// MODUŁ TRENINGOWY — AI plan + interval.icu
+// ═══════════════════════════════════════════════════════════════
+
+const TR_EDGE_URL = SB_URL + "/functions/v1/training-agent";
+
+const ZONE_COLORS = {
+  Z1: "#3FAE5A", Z2: "#2ECC71", Z3: "#F1C40F", SS: "#E67E22",
+  Z4: "#E74C3C", Z5: "#C0392B", Z6: "#8E44AD", Z7: "#6C3483",
+};
+const zoneKey = z => (z || "Z1").toUpperCase().replace("SWEET SPOT", "SS").trim();
+
+const TR_DAYS   = ["monday","tuesday","wednesday","thursday","friday","saturday","sunday"];
+const TR_DAYS_L = ["PON","WT","ŚR","CZW","PT","SOB","ND"];
+const TR_PRIOS  = [
+  { id:"ftp",       label:"FTP / Próg",     emoji:"⚡" },
+  { id:"vo2max",    label:"VO2max",         emoji:"🫁" },
+  { id:"endurance", label:"Wytrzymałość",   emoji:"🛣️" },
+  { id:"base",      label:"Baza tlenowa",   emoji:"🫀" },
+];
+const TR_TABS = [
+  { id:"plan",   l:"MÓJ PLAN" },
+  { id:"starty", l:"STARTY"   },
+  { id:"profil", l:"PROFIL"   },
+];
+
+// ── Wykres treningu (bloki stref) ─────────────────────────────
+function TrWorkoutChart({ segments, ftp }) {
+  if (!Array.isArray(segments) || segments.length === 0) return null;
+  const total = segments.reduce((s, x) => s + (x.duration_min || 0), 0);
+  if (!total) return null;
+
+  const hasPower = segments.some(s => s.watts);
+  const maxVal = hasPower
+    ? Math.max(...segments.map(s => s.watts || 0), (ftp || 200) * 1.15)
+    : Math.max(...segments.map(s => s.hr_target || 0), 190);
+  const zones = [...new Set(segments.map(s => zoneKey(s.zone)))];
+
+  return (
+    <div style={{ marginBottom:10 }}>
+      <div style={{ display:"flex", alignItems:"flex-end", height:78, background:BG, borderRadius:10, padding:"4px 3px", border:"1px solid "+BDR, overflow:"hidden" }}>
+        {segments.map((seg, i) => {
+          const val = hasPower ? (seg.watts || 0) : (seg.hr_target || 0);
+          const col = ZONE_COLORS[zoneKey(seg.zone)] || ZONE_COLORS.Z2;
+          return (
+            <div key={i}
+              title={`${seg.label || zoneKey(seg.zone)}: ${seg.duration_min} min @ ${hasPower ? seg.watts + "W" : seg.hr_target + " bpm"}`}
+              style={{
+                width: ((seg.duration_min || 0) / total * 100) + "%",
+                height: Math.max((val / maxVal) * 100, 5) + "%",
+                background: col, marginRight:1, borderRadius:"3px 3px 0 0",
+                minWidth:3, opacity:0.92,
+              }} />
+          );
+        })}
+      </div>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginTop:6, gap:8 }}>
+        <div style={{ display:"flex", gap:5, flexWrap:"wrap" }}>
+          {zones.map(z => (
+            <span key={z} style={{ fontSize:9, padding:"1px 6px", borderRadius:4, background:(ZONE_COLORS[z] || "#555") + "26", border:"1px solid " + (ZONE_COLORS[z] || "#555") + "66", color:ZONE_COLORS[z] || SUB, fontFamily:FT, fontWeight:600, letterSpacing:0.5 }}>{z}</span>
+          ))}
+        </div>
+        <span style={{ fontSize:10, color:MUTED, fontFamily:FT, letterSpacing:0.8, whiteSpace:"nowrap" }}>
+          {total} MIN{hasPower && ftp ? " · FTP " + ftp + "W" : ""}
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ── Lista segmentów ───────────────────────────────────────────
+function TrSegmentList({ segments }) {
+  if (!Array.isArray(segments) || segments.length === 0) return null;
+  return (
+    <div style={{ marginTop:8 }}>
+      {segments.map((s, i) => {
+        const z = zoneKey(s.zone);
+        const val = s.watts ? s.watts + "W" : s.hr_target ? s.hr_target + " bpm" : "";
+        return (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:8, padding:"3px 0", fontSize:12 }}>
+            <span style={{ width:6, height:6, borderRadius:3, background:ZONE_COLORS[z] || "#555", flexShrink:0 }} />
+            <span style={{ color:MUTED, minWidth:46, fontVariantNumeric:"tabular-nums" }}>{s.duration_min} min</span>
+            <span style={{ color:TEXT, fontWeight:600, minWidth:58, fontVariantNumeric:"tabular-nums" }}>{val}</span>
+            <span style={{ color:SUB }}>{s.label || z}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ── Karta planu tygodniowego ──────────────────────────────────
+function TrPlanCard({ plan, ftp, expanded, onToggle }) {
+  const mon = new Date(plan.week_start_date);
+  const sun = new Date(mon); sun.setDate(sun.getDate() + 6);
+  const weekLabel = mon.toLocaleDateString("pl-PL", { day:"numeric", month:"short" }) + " – " + sun.toLocaleDateString("pl-PL", { day:"numeric", month:"short" });
+
+  const bm = plan.weekly_summary?.match(/\[Blok (\d+), Tydzień (\d)\/4\]/);
+  const blockLabel = bm ? "BLOK " + bm[1] + " · TYDZ. " + bm[2] + "/4" : "";
+  const summary = (plan.weekly_summary || "").replace(/\[Blok \d+, Tydzień \d\/4\]\s*/, "");
+
+  let workouts = [];
+  try {
+    workouts = typeof plan.workouts === "string" ? JSON.parse(plan.workouts) : plan.workouts;
+    if (!Array.isArray(workouts)) workouts = [];
+  } catch { workouts = []; }
+
+  return (
+    <Card accent={expanded} sx={{ marginBottom:12 }}>
+      <div onClick={onToggle} className="no-tap" style={{ padding:"15px 17px", cursor:"pointer", display:"flex", justifyContent:"space-between", alignItems:"center", gap:10 }}>
+        <div style={{ minWidth:0 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap", marginBottom:4 }}>
+            <span style={{ fontFamily:FT, fontSize:15, fontWeight:600, letterSpacing:0.8, textTransform:"uppercase", color:TEXT }}>{weekLabel}</span>
+            {blockLabel && <Pill label={blockLabel} sz={9} />}
+          </div>
+          <div style={{ fontSize:12, color:SUB }}>
+            {workouts.length > 0 ? workouts.length + " treningów" : "plan tekstowy"}
+            {plan.planned_tss ? " · " + plan.planned_tss + " TSS" : ""}
+            {plan.sent_to_icu ? " · 📤 ICU" : ""}
+          </div>
+        </div>
+        <div style={{ color:MUTED, transform: expanded ? "rotate(180deg)" : "none", transition:"transform 0.25s " + SPR, flexShrink:0 }}><IChevD /></div>
+      </div>
+
+      {expanded && (
+        <div style={{ padding:"0 17px 17px" }}>
+          {workouts.length > 0 ? workouts.map((w, i) => (
+            <div key={i} style={{ padding:"13px 15px", marginBottom:10, background:SURF2, borderRadius:12, borderLeft:"3px solid " + RED }}>
+              <div style={{ fontFamily:FT, fontSize:14, fontWeight:600, letterSpacing:0.6, textTransform:"uppercase", color:RED, marginBottom:5 }}>
+                {w.day || "Dzień " + (i + 1)} — {w.type || "Trening"}
+              </div>
+              <div style={{ fontSize:11.5, color:MUTED, marginBottom:9 }}>
+                {w.duration_min ? "⏱ " + w.duration_min + " min" : ""}
+                {w.tss ? " · " + w.tss + " TSS" : ""}
+                {w.rpe ? " · RPE " + w.rpe + "/10" : ""}
+                {w.cadence ? " · " + w.cadence : ""}
+              </div>
+              <TrWorkoutChart segments={w.segments} ftp={ftp} />
+              <TrSegmentList segments={w.segments} />
+              {w.goal && <div style={{ fontSize:12, color:SUB, marginTop:9, fontStyle:"italic" }}>🎯 {w.goal}</div>}
+            </div>
+          )) : (
+            <div style={{ fontSize:13, color:SUB, lineHeight:1.65, whiteSpace:"pre-wrap" }}>{plan.weekly_summary || "Brak szczegółów."}</div>
+          )}
+
+          {plan.ai_warnings && (
+            <div style={{ marginTop:10, padding:"11px 13px", borderRadius:10, background:"rgba(245,197,24,0.08)", border:"1px solid rgba(245,197,24,0.30)", fontSize:12, color:GOLD, lineHeight:1.55 }}>⚠️ {plan.ai_warnings}</div>
+          )}
+          {summary && workouts.length > 0 && (
+            <div style={{ marginTop:10, padding:"11px 13px", borderRadius:10, background:SURF2, fontSize:12, color:SUB, lineHeight:1.6 }}>📊 {summary}</div>
+          )}
+          {plan.generated_at && (
+            <div style={{ marginTop:10, fontSize:10.5, color:MUTED, fontFamily:FT, letterSpacing:0.6 }}>
+              WYGENEROWANO: {new Date(plan.generated_at).toLocaleString("pl-PL")}
+            </div>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+// ── Zakładka: MÓJ PLAN ────────────────────────────────────────
+function TrPlanTab({ userId, tp, toast }) {
+  const [plans, setPlans]   = useState([]);
+  const [load, setLoad]     = useState(true);
+  const [gen, setGen]       = useState(false);
+  const [openId, setOpenId] = useState(null);
+
+  useEffect(() => {
+    if (!tp) { setLoad(false); return; }
+    let alive = true;
+    (async () => {
+      setLoad(true);
+      const { data } = await sb.from("training_plans").select("*")
+        .eq("training_profile_id", tp.id)
+        .order("week_start_date", { ascending:false }).limit(8);
+      if (!alive) return;
+      setPlans(data || []);
+      if (data?.length) setOpenId(data[0].id);
+      setLoad(false);
+    })();
+    return () => { alive = false; };
+  }, [tp?.id]);
+
+  async function reload() {
+    const { data } = await sb.from("training_plans").select("*")
+      .eq("training_profile_id", tp.id)
+      .order("week_start_date", { ascending:false }).limit(8);
+    setPlans(data || []);
+    if (data?.length) setOpenId(data[0].id);
+  }
+
+  async function generate() {
+    setGen(true);
+    try {
+      const res = await fetch(TR_EDGE_URL, {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "Authorization":"Bearer " + SB_KEY, "apikey":SB_KEY },
+        body: JSON.stringify({ user_id: userId }),
+      });
+      const out = await res.json();
+      if (out.error) toast("Błąd: " + out.error, "error");
+      else { toast("Plan wygenerowany!"); await reload(); }
+    } catch (e) {
+      toast("Błąd: " + e.message, "error");
+    } finally { setGen(false); }
+  }
+
+  if (!tp) return (
+    <Card sx={{ padding:"36px 22px", textAlign:"center" }}>
+      <div style={{ fontSize:38, marginBottom:12 }}>⚙️</div>
+      <div style={{ color:SUB, fontSize:13.5, lineHeight:1.6 }}>Najpierw uzupełnij swój profil w zakładce <b style={{ color:TEXT }}>PROFIL</b>.</div>
+    </Card>
+  );
+
+  const modeLabel = tp.training_mode === "hr" ? "❤️ TĘTNO" : tp.training_mode === "both" ? "⚡❤️ MOC + TĘTNO" : "⚡ MOC";
+
+  return (
+    <div>
+      <Card sx={{ padding:"17px 18px", marginBottom:14 }}>
+        <div style={{ fontFamily:FT, fontSize:11, color:SUB, letterSpacing:1.8, textTransform:"uppercase", fontWeight:600, marginBottom:10 }}>Generator planu</div>
+        <div style={{ display:"flex", gap:8, flexWrap:"wrap", marginBottom:13 }}>
+          {tp.ftp  && <Pill label={"FTP " + tp.ftp + "W"} color={GOLD} sz={10} />}
+          {tp.lthr && <Pill label={"LTHR " + tp.lthr} color={RED} sz={10} />}
+          {tp.weight_kg && <Pill label={tp.weight_kg + " KG"} color={SILV} sz={10} />}
+          <Pill label={modeLabel} color={GRN} sz={10} />
+        </div>
+        <Btn full onClick={generate} disabled={gen} size="lg">
+          {gen ? "AGENT PRACUJE… (30-60 s)" : "GENERUJ PLAN NA TEN TYDZIEŃ"}
+        </Btn>
+        <div style={{ fontSize:11, color:MUTED, marginTop:9, lineHeight:1.55 }}>
+          Agent uwzględni Twój profil, dostępne dni, priorytety, kalendarz startów i dane wellness z interval.icu.
+        </div>
+      </Card>
+
+      {load ? (
+        <><Skel h={72} sx={{ marginBottom:12 }} /><Skel h={72} /></>
+      ) : plans.length === 0 ? (
+        <Card sx={{ padding:"34px 22px", textAlign:"center" }}>
+          <div style={{ fontSize:34, marginBottom:10 }}>📋</div>
+          <div style={{ color:SUB, fontSize:13 }}>Brak planów — kliknij GENERUJ powyżej.</div>
+        </Card>
+      ) : plans.map(p => (
+        <TrPlanCard key={p.id} plan={p} ftp={tp.ftp}
+          expanded={openId === p.id}
+          onToggle={() => setOpenId(openId === p.id ? null : p.id)} />
+      ))}
+    </div>
+  );
+}
+
+// ── Zakładka: STARTY ──────────────────────────────────────────
+function TrRacesTab({ userId, toast }) {
+  const [races, setRaces] = useState([]);
+  const [load, setLoad]   = useState(true);
+  const [form, setForm]   = useState(null); // null | {id?, race_date, race_name, distance_km, notes}
+
+  async function reload() {
+    const { data } = await sb.from("athlete_race_calendar").select("*")
+      .eq("user_id", userId).order("race_date", { ascending:true });
+    setRaces(data || []);
+    setLoad(false);
+  }
+  useEffect(() => { reload(); }, [userId]);
+
+  async function save() {
+    if (!form.race_date || !form.race_name.trim()) { toast("Data i nazwa są wymagane.", "error"); return; }
+    const payload = {
+      user_id: userId,
+      race_date: form.race_date,
+      race_name: form.race_name.trim(),
+      distance_km: parseInt(form.distance_km) || null,
+      notes: form.notes?.trim() || null,
+    };
+    const { error } = form.id
+      ? await sb.from("athlete_race_calendar").update(payload).eq("id", form.id)
+      : await sb.from("athlete_race_calendar").insert(payload);
+    if (error) { toast("Błąd: " + error.message, "error"); return; }
+    toast(form.id ? "Start zaktualizowany" : "Start dodany");
+    setForm(null); reload();
+  }
+
+  async function remove(id) {
+    if (!window.confirm("Usunąć ten start?")) return;
+    await sb.from("athlete_race_calendar").delete().eq("id", id);
+    toast("Start usunięty");
+    reload();
+  }
+
+  const dLeft = d => Math.round((new Date(d).getTime() - new Date().setHours(0,0,0,0)) / 86400000);
+
+  if (load) return <><Skel h={80} sx={{ marginBottom:12 }} /><Skel h={80} /></>;
+
+  return (
+    <div>
+      {races.length === 0 && !form && (
+        <Card sx={{ padding:"36px 22px", textAlign:"center", marginBottom:14 }}>
+          <div style={{ fontSize:38, marginBottom:12 }}>🏁</div>
+          <div style={{ color:SUB, fontSize:13.5, lineHeight:1.6, marginBottom:16 }}>
+            Brak startów. Dodaj wyścigi — agent uwzględni je przy taperingu.<br />
+            Starty klubowe pojawią się tu automatycznie po zapisaniu się przez RSVP.
+          </div>
+          <Btn onClick={() => setForm({ race_date:"", race_name:"", distance_km:"", notes:"" })}><IPlus /> DODAJ START</Btn>
+        </Card>
+      )}
+
+      {races.map(r => {
+        const d = dLeft(r.race_date), past = d < 0, soon = d >= 0 && d <= 10;
+        return (
+          <Card key={r.id} accent={soon} hover={false} sx={{ padding:"14px 16px", marginBottom:10, opacity: past ? 0.45 : 1 }}>
+            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start", gap:10 }}>
+              <div style={{ minWidth:0 }}>
+                <div style={{ display:"flex", alignItems:"center", gap:7, flexWrap:"wrap", marginBottom:4 }}>
+                  <span style={{ fontFamily:FT, fontSize:15.5, fontWeight:600, letterSpacing:0.6, textTransform:"uppercase", color: soon ? RED : TEXT }}>{r.race_name}</span>
+                  {r.source === "club" && <Pill label="🐺 KLUB" sz={9} />}
+                </div>
+                <div style={{ fontSize:12.5, color:SUB }}>
+                  {new Date(r.race_date).toLocaleDateString("pl-PL", { day:"numeric", month:"long", year:"numeric" })}
+                  {r.distance_km ? " · " + r.distance_km + " km" : ""}
+                </div>
+                {!past && (
+                  <div style={{ fontSize:11.5, marginTop:5, fontFamily:FT, letterSpacing:0.8, fontWeight:600, color: soon ? RED : GRN }}>
+                    {d === 0 ? "🔥 DZIŚ!" : d === 1 ? "⚡ JUTRO!" : "ZA " + d + " DNI"}
+                    {soon && d > 1 ? " — TAPERING" : ""}
+                  </div>
+                )}
+                {r.notes && <div style={{ fontSize:11.5, color:MUTED, marginTop:5, fontStyle:"italic" }}>{r.notes}</div>}
+              </div>
+              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                {r.source === "club" ? (
+                  <span style={{ fontSize:10, color:MUTED, fontFamily:FT, letterSpacing:0.6, alignSelf:"center" }}>Z RSVP</span>
+                ) : (
+                  <>
+                    <Btn v="ghost" size="sm" onClick={() => setForm({ id:r.id, race_date:r.race_date, race_name:r.race_name, distance_km:r.distance_km?.toString() || "", notes:r.notes || "" })}><IEdit /></Btn>
+                    <Btn v="danger" size="sm" onClick={() => remove(r.id)}><ITrash /></Btn>
+                  </>
+                )}
+              </div>
+            </div>
+          </Card>
+        );
+      })}
+
+      {!form && races.length > 0 && (
+        <Btn full v="ghost" onClick={() => setForm({ race_date:"", race_name:"", distance_km:"", notes:"" })} sx={{ marginTop:4 }}><IPlus /> DODAJ START</Btn>
+      )}
+
+      {form && (
+        <Sheet title={form.id ? "Edytuj start" : "Nowy start"} onClose={() => setForm(null)}>
+          <TInput label="Nazwa" value={form.race_name} onChange={e => setForm({ ...form, race_name:e.target.value })} placeholder="np. Bór Ultra" />
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
+            <TInput label="Data" type="date" value={form.race_date} onChange={e => setForm({ ...form, race_date:e.target.value })} />
+            <TInput label="Dystans (km)" type="number" value={form.distance_km} onChange={e => setForm({ ...form, distance_km:e.target.value })} placeholder="km" />
+          </div>
+          <TInput label="Notatki" value={form.notes} onChange={e => setForm({ ...form, notes:e.target.value })} placeholder="opcjonalnie" />
+          <Btn full onClick={save} sx={{ marginTop:6 }}>{form.id ? "ZAPISZ ZMIANY" : "DODAJ START"}</Btn>
+        </Sheet>
+      )}
+    </div>
+  );
+}
+
+// ── Zakładka: PROFIL ──────────────────────────────────────────
+function TrProfileTab({ userId, tp, onSaved, toast }) {
+  const [f, setF] = useState({
+    ftp:"", weight_kg:"", age:"", wake_time:"08:00",
+    max_hr:"", rest_hr:"", lthr:"", training_mode:"power",
+    icu_id:"", icu_key:"",
+  });
+  const [days, setDays]   = useState(TR_DAYS.map(() => ({ enabled:false, minutes:60 })));
+  const [prios, setPrios] = useState({});
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (!tp) return;
+    setF({
+      ftp: tp.ftp?.toString() || "",
+      weight_kg: tp.weight_kg?.toString() || "",
+      age: tp.age?.toString() || "",
+      wake_time: tp.wake_time?.slice(0,5) || "08:00",
+      max_hr: tp.max_hr?.toString() || "",
+      rest_hr: tp.rest_hr?.toString() || "",
+      lthr: tp.lthr?.toString() || "",
+      training_mode: tp.training_mode || "power",
+      icu_id: tp.interval_icu_athlete_id || "",
+      icu_key: tp.interval_icu_api_key_encrypted || "",
+    });
+    (async () => {
+      const { data: av } = await sb.from("training_availability").select("*").eq("training_profile_id", tp.id).maybeSingle();
+      if (av) setDays(TR_DAYS.map(d => ({ enabled: av[d + "_enabled"] || false, minutes: av[d + "_minutes"] || 60 })));
+      const { data: pr } = await sb.from("training_priorities").select("priority, weight").eq("training_profile_id", tp.id);
+      if (pr) { const o = {}; pr.forEach(x => o[x.priority] = x.weight); setPrios(o); }
+    })();
+  }, [tp?.id]);
+
+  const isPwr = f.training_mode === "power" || f.training_mode === "both";
+  const isHr  = f.training_mode === "hr"    || f.training_mode === "both";
+  const totalMin = days.reduce((s, d) => s + (d.enabled ? d.minutes : 0), 0);
+
+  async function save() {
+    setSaving(true);
+    try {
+      const { data: prof, error: e1 } = await sb.from("training_profiles").upsert({
+        user_id: userId,
+        ftp: parseInt(f.ftp) || null,
+        weight_kg: parseFloat(f.weight_kg) || null,
+        age: parseInt(f.age) || null,
+        wake_time: f.wake_time || "08:00",
+        max_hr: parseInt(f.max_hr) || null,
+        rest_hr: parseInt(f.rest_hr) || null,
+        lthr: parseInt(f.lthr) || null,
+        training_mode: f.training_mode,
+        interval_icu_athlete_id: f.icu_id.trim() || null,
+        interval_icu_api_key_encrypted: f.icu_key.trim() || null,
+        is_active: true,
+      }, { onConflict:"user_id" }).select().single();
+      if (e1) throw e1;
+
+      const av = { training_profile_id: prof.id };
+      TR_DAYS.forEach((d, i) => { av[d + "_enabled"] = days[i].enabled; av[d + "_minutes"] = days[i].minutes; });
+      const { error: e2 } = await sb.from("training_availability").upsert(av, { onConflict:"training_profile_id" });
+      if (e2) throw e2;
+
+      await sb.from("training_priorities").delete().eq("training_profile_id", prof.id);
+      const rows = Object.entries(prios).map(([p, w]) => ({ training_profile_id: prof.id, priority:p, weight:w }));
+      if (rows.length) { const { error: e3 } = await sb.from("training_priorities").insert(rows); if (e3) throw e3; }
+
+      toast("Profil treningowy zapisany");
+      onSaved();
+    } catch (err) {
+      toast("Błąd: " + err.message, "error");
+    } finally { setSaving(false); }
+  }
+
+  const modeBtns = [
+    { id:"power", l:"⚡ MOC" },
+    { id:"hr",    l:"❤️ TĘTNO" },
+    { id:"both",  l:"⚡❤️ OBA" },
+  ];
+
+  return (
+    <div>
+      {/* TRYB */}
+      <Card sx={{ padding:"17px 18px", marginBottom:12 }}>
+        <div style={{ fontFamily:FT, fontSize:11, color:SUB, letterSpacing:1.8, textTransform:"uppercase", fontWeight:600, marginBottom:11 }}>Tryb treningowy</div>
+        <div style={{ display:"flex", gap:5, background:SURF2, borderRadius:11, padding:4, border:"1px solid " + BDR }}>
+          {modeBtns.map(m => (
+            <button key={m.id} onClick={() => setF({ ...f, training_mode:m.id })} className="no-tap" style={{
+              flex:1, padding:"10px 4px", border:"none", borderRadius:8, cursor:"pointer",
+              background: f.training_mode === m.id ? RED : "transparent",
+              color: f.training_mode === m.id ? "#fff" : MUTED,
+              fontFamily:FT, fontSize:11.5, fontWeight:600, letterSpacing:0.7,
+              boxShadow: f.training_mode === m.id ? "0 4px 14px rgba(255,0,38,0.35)" : "none",
+            }}>{m.l}</button>
+          ))}
+        </div>
+        <div style={{ fontSize:11.5, color:MUTED, marginTop:9, lineHeight:1.55 }}>
+          {f.training_mode === "power" ? "Plan w wattach — potrzebny miernik mocy."
+            : f.training_mode === "hr" ? "Plan w tętnie — wystarczy zegarek z czujnikiem HR."
+            : "Plan z wattami i tętnem — pełna kontrola."}
+        </div>
+      </Card>
+
+      {/* DANE */}
+      <Card sx={{ padding:"17px 18px", marginBottom:12 }}>
+        <div style={{ fontFamily:FT, fontSize:11, color:SUB, letterSpacing:1.8, textTransform:"uppercase", fontWeight:600, marginBottom:13 }}>Dane zawodnika</div>
+        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:11 }}>
+          {isPwr && <TInput label="FTP (W)" type="number" value={f.ftp} onChange={e => setF({ ...f, ftp:e.target.value })} placeholder="np. 240" />}
+          <TInput label="Waga (kg)" type="number" step="0.1" value={f.weight_kg} onChange={e => setF({ ...f, weight_kg:e.target.value })} placeholder="np. 75" />
+          <TInput label="Wiek" type="number" value={f.age} onChange={e => setF({ ...f, age:e.target.value })} placeholder="np. 34" />
+          <TInput label="Pobudka" type="time" value={f.wake_time} onChange={e => setF({ ...f, wake_time:e.target.value })} />
+        </div>
+      </Card>
+
+      {/* TĘTNO */}
+      {isHr && (
+        <Card sx={{ padding:"17px 18px", marginBottom:12 }}>
+          <div style={{ fontFamily:FT, fontSize:11, color:SUB, letterSpacing:1.8, textTransform:"uppercase", fontWeight:600, marginBottom:13 }}>Dane tętna</div>
+          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:9 }}>
+            <TInput label="HR max" type="number" value={f.max_hr} onChange={e => setF({ ...f, max_hr:e.target.value })} placeholder="190" />
+            <TInput label="HR spocz." type="number" value={f.rest_hr} onChange={e => setF({ ...f, rest_hr:e.target.value })} placeholder="52" />
+            <TInput label="LTHR" type="number" value={f.lthr} onChange={e => setF({ ...f, lthr:e.target.value })} placeholder="170" />
+          </div>
+          <div style={{ fontSize:11.5, color:MUTED, lineHeight:1.55 }}>
+            LTHR = tętno progowe. Test: 30 min solo na maksa, średnie HR z ostatnich 20 minut.
+          </div>
+        </Card>
+      )}
+
+      {/* DOSTĘPNOŚĆ */}
+      <Card sx={{ padding:"17px 18px", marginBottom:12 }}>
+        <div style={{ display:"flex", justifyContent:"space-between", alignItems:"baseline", marginBottom:6 }}>
+          <div style={{ fontFamily:FT, fontSize:11, color:SUB, letterSpacing:1.8, textTransform:"uppercase", fontWeight:600 }}>Dostępne dni</div>
+          <div style={{ fontFamily:FT, fontSize:12, color:RED, letterSpacing:0.8, fontWeight:600 }}>{Math.floor(totalMin / 60)}h {totalMin % 60}min / tydz.</div>
+        </div>
+        <div style={{ fontSize:11.5, color:MUTED, marginBottom:12 }}>Zaznacz dni i podaj ile masz czasu na trening.</div>
+        {TR_DAYS.map((d, i) => (
+          <div key={d} style={{ display:"flex", alignItems:"center", gap:11, padding:"7px 0", borderBottom: i < 6 ? "1px solid " + BDR : "none" }}>
+            <button onClick={() => { const n = [...days]; n[i] = { ...n[i], enabled: !n[i].enabled }; setDays(n); }} className="no-tap" style={{
+              width:52, height:36, borderRadius:9, border:"none", cursor:"pointer", flexShrink:0,
+              background: days[i].enabled ? RED : SURF2,
+              color: days[i].enabled ? "#fff" : MUTED,
+              fontFamily:FT, fontSize:12, fontWeight:600, letterSpacing:0.8,
+              boxShadow: days[i].enabled ? "0 3px 12px rgba(255,0,38,0.30)" : "none",
+            }}>{TR_DAYS_L[i]}</button>
+            {days[i].enabled ? (
+              <div style={{ display:"flex", alignItems:"center", gap:8, flex:1 }}>
+                <input type="number" value={days[i].minutes || ""} placeholder="min"
+                  onChange={e => { const n = [...days]; n[i] = { ...n[i], minutes: parseInt(e.target.value) || 0 }; setDays(n); }}
+                  style={{ ...IS, width:82, textAlign:"center", padding:"9px 8px" }} />
+                <span style={{ fontSize:12, color:MUTED }}>minut</span>
+              </div>
+            ) : <span style={{ fontSize:12, color:MUTED, opacity:0.55 }}>dzień wolny</span>}
+          </div>
+        ))}
+      </Card>
+
+      {/* PRIORYTETY */}
+      <Card sx={{ padding:"17px 18px", marginBottom:12 }}>
+        <div style={{ fontFamily:FT, fontSize:11, color:SUB, letterSpacing:1.8, textTransform:"uppercase", fontWeight:600, marginBottom:6 }}>Cele treningowe</div>
+        <div style={{ fontSize:11.5, color:MUTED, marginBottom:12 }}>Wybierz cele i ustaw ważność (1–10).</div>
+        {TR_PRIOS.map(po => {
+          const on = prios[po.id] !== undefined;
+          return (
+            <div key={po.id} style={{
+              display:"flex", alignItems:"center", gap:11, padding:"11px 13px", marginBottom:7,
+              background: on ? REDD : SURF2, border:"1px solid " + (on ? REDB : BDR), borderRadius:11,
+              transition:"background 0.2s ease, border-color 0.2s ease",
+            }}>
+              <div onClick={() => { const n = { ...prios }; if (on) delete n[po.id]; else n[po.id] = 5; setPrios(n); }}
+                className="no-tap" style={{
+                  width:26, height:26, borderRadius:7, cursor:"pointer", flexShrink:0,
+                  background: on ? RED : "transparent", border:"2px solid " + (on ? RED : BDHI),
+                  display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:14, fontWeight:700,
+                }}>{on ? "✓" : ""}</div>
+              <span onClick={() => { const n = { ...prios }; if (on) delete n[po.id]; else n[po.id] = 5; setPrios(n); }}
+                style={{ flex:1, fontSize:13.5, color: on ? TEXT : MUTED, cursor:"pointer" }}>{po.emoji} {po.label}</span>
+              {on && (
+                <div style={{ display:"flex", alignItems:"center", gap:8, flexShrink:0 }}>
+                  <input type="range" min="1" max="10" value={prios[po.id]}
+                    onChange={e => setPrios({ ...prios, [po.id]: parseInt(e.target.value) })}
+                    style={{ width:76, accentColor:RED }} />
+                  <span style={{ fontFamily:FT, fontSize:15, fontWeight:700, color:RED, minWidth:20, textAlign:"center" }}>{prios[po.id]}</span>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </Card>
+
+      {/* INTERVAL.ICU */}
+      <Card sx={{ padding:"17px 18px", marginBottom:16 }}>
+        <div style={{ fontFamily:FT, fontSize:11, color:SUB, letterSpacing:1.8, textTransform:"uppercase", fontWeight:600, marginBottom:13 }}>Interval.icu — opcjonalnie</div>
+        <TInput label="Athlete ID" value={f.icu_id} onChange={e => setF({ ...f, icu_id:e.target.value })} placeholder="np. i12345" />
+        <TInput label="API Key" type="password" value={f.icu_key} onChange={e => setF({ ...f, icu_key:e.target.value })} placeholder="klucz API" />
+        <div style={{ fontSize:11.5, color:MUTED, lineHeight:1.55 }}>
+          interval.icu → Settings → Developer Settings. Po połączeniu agent pobierze Twoje CTL/ATL/TSB i wyśle plan do kalendarza.
+        </div>
+      </Card>
+
+      <Btn full size="lg" onClick={save} disabled={saving}>{saving ? "ZAPISUJĘ…" : "ZAPISZ PROFIL TRENINGOWY"}</Btn>
+    </div>
+  );
+}
+
+// ── Ekran główny modułu ───────────────────────────────────────
+function TrainingScreen({ currentUser, toast }) {
+  const [tab, setTab] = useState("plan");
+  const [tp, setTp]   = useState(null);
+  const [load, setLoad] = useState(true);
+  const userId = currentUser?.id;
+
+  async function loadProfile() {
+    if (!userId) { setLoad(false); return; }
+    const { data } = await sb.from("training_profiles").select("*").eq("user_id", userId).maybeSingle();
+    setTp(data || null);
+    setLoad(false);
+  }
+  useEffect(() => { loadProfile(); }, [userId]);
+
   // Podwójne zabezpieczenie — gdyby ktoś obszedł nawigację
   if (!currentUser?.trainingAccess) {
     return (
@@ -2348,24 +2928,33 @@ function TrainingScreen({ data, currentUser }) {
       </div>
     );
   }
+
   return (
     <div className="fade-stagger">
-      <SHead title="MODUŁ TRENINGOWY" sub="Twój indywidualny plan treningowy" />
-      <Card sx={{ padding:"28px 22px", textAlign:"center", marginBottom:16 }}>
-        <div style={{ fontSize:44, marginBottom:14 }}>🏋️</div>
-        <div style={{ fontFamily:FT, fontSize:19, fontWeight:700, letterSpacing:0.6, textTransform:"uppercase", marginBottom:10 }}>W przygotowaniu</div>
-        <p style={{ color:SUB, fontSize:13, lineHeight:1.7, margin:"0 auto", maxWidth:340 }}>
-          Moduł treningowy oparty na AI jest w budowie. Wkrótce będziesz mógł tu ustawić swój profil,
-          dostępne dni treningowe, priorytety i kalendarz startów — a agent wygeneruje dla Ciebie
-          spersonalizowany plan tygodniowy z integracją interval.icu.
-        </p>
-      </Card>
-      <Card accent sx={{ padding:"16px 18px" }}>
-        <div style={{ fontFamily:FT, fontSize:10, color:"#3B82F6", letterSpacing:2, textTransform:"uppercase", marginBottom:8, fontWeight:700 }}>Masz dostęp ✓</div>
-        <p style={{ color:SUB, fontSize:12.5, lineHeight:1.6, margin:0 }}>
-          Twoje konto zostało dodane do modułu treningowego przez administratora. Damy znać, gdy funkcje będą gotowe.
-        </p>
-      </Card>
+      <SHead title="MODUŁ TRENINGOWY" sub="Twój indywidualny plan treningowy AI" />
+
+      <div style={{ display:"flex", gap:5, background:SURF, borderRadius:13, padding:4, border:"1px solid " + BDR, marginBottom:18 }}>
+        {TR_TABS.map(t => (
+          <button key={t.id} onClick={() => setTab(t.id)} className="no-tap" style={{
+            flex:1, padding:"11px 5px", border:"none", borderRadius:10, cursor:"pointer",
+            background: tab === t.id ? RED : "transparent",
+            color: tab === t.id ? "#fff" : MUTED,
+            fontFamily:FT, fontSize:12, fontWeight:600, letterSpacing:1,
+            boxShadow: tab === t.id ? "0 4px 14px rgba(255,0,38,0.35)" : "none",
+            transition:"background 0.2s ease, color 0.2s ease",
+          }}>{t.l}</button>
+        ))}
+      </div>
+
+      {load ? (
+        <><Skel h={90} sx={{ marginBottom:12 }} /><Skel h={140} /></>
+      ) : (
+        <>
+          {tab === "plan"   && <TrPlanTab    userId={userId} tp={tp} toast={toast} />}
+          {tab === "starty" && <TrRacesTab   userId={userId} toast={toast} />}
+          {tab === "profil" && <TrProfileTab userId={userId} tp={tp} toast={toast} onSaved={loadProfile} />}
+        </>
+      )}
     </div>
   );
 }
