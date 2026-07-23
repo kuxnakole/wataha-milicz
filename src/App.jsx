@@ -109,6 +109,7 @@ const GCSS = [
   "@keyframes sheetInFull { from { opacity:0; transform:translateY(24px) scale(0.98); } to { opacity:1; transform:translateY(0) scale(1); } }",
   "@keyframes fadeUp { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }",
   "@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }",
+  "@keyframes livePulse { 0%,100% { box-shadow:0 0 0 0 rgba(255,0,38,0.55); } 50% { box-shadow:0 0 0 5px rgba(255,0,38,0); } }",
   "@keyframes shimmer { 0% { background-position:-200% 0; } 100% { background-position:200% 0; } }",
   ".skel { background:linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.09) 37%, rgba(255,255,255,0.04) 63%); background-size:200% 100%; animation:shimmer 1.4s ease-in-out infinite; }",
   ".img-fade { animation:fadeIn 0.45s ease; }",
@@ -3214,6 +3215,18 @@ export default function App() {
       ]);
       const attMap={}; (attRes.data||[]).forEach(a=>{if(!attMap[a.ride_id])attMap[a.ride_id]=[];attMap[a.ride_id].push(a);});
       const regMap={}; (regRes.data||[]).forEach(r=>{if(!regMap[r.race_id])regMap[r.race_id]=[];regMap[r.race_id].push(r);});
+
+      // Auto-fix: ustawki z datą w przeszłości i statusem "upcoming" → oznacz jako "done" w bazie
+      const todayISO = new Date().toISOString().slice(0,10);
+      const ridesRaw = ridesRes.data || [];
+      const pastUpcoming = ridesRaw.filter(x => x.status === "upcoming" && x.date && x.date < todayISO);
+      if (pastUpcoming.length > 0) {
+        await Promise.all(pastUpcoming.map(x =>
+          sb.from("rides").update({ status:"done" }).eq("id", x.id)
+        ));
+        ridesRaw.forEach(x => { if (x.status === "upcoming" && x.date && x.date < todayISO) x.status = "done"; });
+      }
+
       let notifsData = [];
       if (uid) {
         const { data: nr } = await sb.from("notifications").select("*").order("created_at", { ascending:false });
@@ -3256,7 +3269,21 @@ export default function App() {
     } catch(e) { console.warn("[PUSH] Subscribe error:", e); }
   }
 
-  async function loadRides()    { const { data: r } = await sb.from("rides").select("*").order("date",{ascending:false}); if(r) setData(d=>({...d, rides:r.map(rideFromDB)})); }
+  async function loadRides() {
+    const { data: r } = await sb.from("rides").select("*").order("date",{ascending:false});
+    if (!r) return;
+    const today = new Date().toISOString().slice(0,10);
+    // Auto-fix: jeśli ustawka ma status "upcoming" ale data minęła → zapisz "done" w bazie
+    const pastUpcoming = r.filter(x => x.status === "upcoming" && x.date && x.date < today);
+    if (pastUpcoming.length > 0) {
+      await Promise.all(pastUpcoming.map(x =>
+        sb.from("rides").update({ status:"done" }).eq("id", x.id)
+      ));
+      // Zastosuj poprawkę lokalnie
+      r.forEach(x => { if (x.status === "upcoming" && x.date && x.date < today) x.status = "done"; });
+    }
+    setData(d => ({...d, rides: r.map(rideFromDB)}));
+  }
   async function loadRaces()    { const { data: r } = await sb.from("races").select("*, race_results(*)").order("date",{ascending:false}); if(r) setData(d=>({...d, races:r.map(raceFromDB)})); }
   async function loadPersonalResults() { const { data: r } = await sb.from("personal_results").select("*"); if(r) setData(d=>({...d, personalResults:r.map(personalResultFromDB)})); }
   async function loadSponsors() { const { data: r } = await sb.from("sponsors").select("*"); if(r) setData(d=>({...d, sponsors:r})); }
@@ -3410,6 +3437,12 @@ await sb.auth.signOut();
                 <button key={n.id} onClick={() => nav(n.id)} className="no-tap" style={{ width:"100%", textAlign:"left", background: page === n.id ? REDD : "transparent", border:"none", borderLeft: page === n.id ? "3px solid " + RED : "3px solid transparent", padding:"13px 20px", cursor:"pointer", color: page === n.id ? RED : SUB, fontFamily:FT, fontWeight:600, fontSize:11, letterSpacing:1.4, display:"flex", alignItems:"center", gap:13, transition:"background 0.22s ease, color 0.22s ease" }}>
                   <span style={{ display:"flex", color: page === n.id ? RED : MUTED, filter: page === n.id ? "drop-shadow(0 0 6px " + REDG + ")" : "none" }}><n.Icon /></span>
                   {n.l}
+                  {n.external && (
+                    <span style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:5, background:"rgba(255,0,38,0.12)", border:"1px solid rgba(255,0,38,0.30)", borderRadius:6, padding:"2px 7px 2px 5px" }}>
+                      <span style={{ width:6, height:6, borderRadius:"50%", background:RED, animation:"livePulse 1.8s ease-in-out infinite", flexShrink:0 }} />
+                      <span style={{ fontSize:8, fontFamily:FT, fontWeight:700, color:RED, letterSpacing:1.2 }}>LIVE</span>
+                    </span>
+                  )}
                   {n.id === "notifs" && user && unread > 0 && (
                     <span style={{ marginLeft:"auto", background:RED, color:"#fff", borderRadius:10, minWidth:18, height:18, padding:"0 5px", fontSize:9, fontFamily:FT, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 8px " + REDG }}>{unread}</span>
                   )}
@@ -3525,6 +3558,12 @@ await sb.auth.signOut();
                     <button key={n.id} onClick={() => nav(n.id)} className="no-tap" style={{ width:"100%", textAlign:"left", background: page === n.id ? REDD : "transparent", border:"none", borderLeft: page === n.id ? "3px solid " + RED : "3px solid transparent", padding:"14px 20px", cursor:"pointer", color: page === n.id ? RED : SUB, fontFamily:FT, fontWeight:600, fontSize:12, letterSpacing:1.6, display:"flex", alignItems:"center", gap:12, transition:"background 0.25s ease, color 0.25s ease" }}>
                       <span style={{ display:"flex", color: page === n.id ? RED : MUTED }}><n.Icon /></span>
                       {n.l}
+                      {n.external && (
+                        <span style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:5, background:"rgba(255,0,38,0.12)", border:"1px solid rgba(255,0,38,0.30)", borderRadius:6, padding:"2px 7px 2px 5px" }}>
+                          <span style={{ width:6, height:6, borderRadius:"50%", background:RED, animation:"livePulse 1.8s ease-in-out infinite", flexShrink:0 }} />
+                          <span style={{ fontSize:8, fontFamily:FT, fontWeight:700, color:RED, letterSpacing:1.2 }}>LIVE</span>
+                        </span>
+                      )}
                       {n.id === "notifs" && user && unread > 0 && (
                         <span style={{ background:RED, color:"#fff", borderRadius:10, minWidth:20, height:20, padding:"0 6px", fontSize:9, fontFamily:FT, fontWeight:700, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:"0 0 10px " + REDG }}>{unread}</span>
                       )}
